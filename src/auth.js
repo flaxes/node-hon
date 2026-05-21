@@ -11,7 +11,7 @@ const TOKEN_EXPIRES_AFTER_MS = 8 * 60 * 60 * 1000;
 const TOKEN_EXPIRE_WARNING_MS = 60 * 60 * 1000;
 
 class HonAuth {
-  constructor({ email, password, device, fetchImpl = globalThis.fetch, sessionStore = null, debug = false }) {
+  constructor({ email, password, device, fetchImpl = globalThis.fetch, sessionStore = null, debug = false, logger = null }) {
     if (!fetchImpl) {
       throw new HonAuthError("A fetch implementation is required");
     }
@@ -21,6 +21,7 @@ class HonAuth {
     this.fetch = fetchImpl;
     this.sessionStore = sessionStore;
     this.debug = debug;
+    this.logger = logger;
     this.cookieJar = new CookieJar();
     this.calledUrls = [];
     this.auth = {
@@ -62,9 +63,12 @@ class HonAuth {
   }
 
   async initialize() {
+    this.logger?.log("Trying to reuse saved session...");
     if (await this.tryLoadSession()) {
+      this.logger?.log("Saved session reused");
       return;
     }
+    this.logger?.log("Saved session unavailable, using full login");
     await this.authenticate();
   }
 
@@ -112,10 +116,12 @@ class HonAuth {
   }
 
   async refresh(refreshToken = "") {
+    const operation = this.logger?.start("Refreshing auth tokens...");
     if (refreshToken) {
       this.auth.refreshToken = refreshToken;
     }
     if (!this.auth.refreshToken) {
+      operation?.success("Refresh skipped");
       return false;
     }
     const params = new URLSearchParams({
@@ -130,6 +136,7 @@ class HonAuth {
       if (this.debug) {
         await this.logAuthError(response, false);
       }
+      operation?.failure("Refresh failed");
       return false;
     }
     const data = await response.json();
@@ -138,6 +145,7 @@ class HonAuth {
     this.auth.expiresAt = new Date(Date.now() + TOKEN_EXPIRES_AFTER_MS).toISOString();
     await this.apiAuth();
     await this.saveSession();
+    operation?.success("Refresh success");
     return true;
   }
 

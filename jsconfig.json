@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "esnext",
+        "lib": ["esnext"],
+        "resolveJsonModule": true,
+        "checkJs": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "noImplicitAny": false,
+        "strictNullChecks": true,
+        "skipLibCheck": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "outDir": "./build"
+    },
+    "include": [
+        "src/**/*",
+        "cli/**/*",
+        "types/**/*",
+        "test/**/*",
+        "config.js",
+        "test.js"
+    ],
+    "exclude": ["build"],
+}

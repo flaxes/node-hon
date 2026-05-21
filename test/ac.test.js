@@ -8,6 +8,7 @@ const { HonClient } = require("../src/client");
 const { HonCommand } = require("../src/command");
 const { HonAppliance } = require("../src/appliance");
 const { ApplianceNotFoundError, UnsupportedControlError } = require("../src/errors");
+const { DebugLogger } = require("../src/logger");
 
 test("HonClient matches air conditioner by macAddress, uniqueId, then nickName", async () => {
   const first = fakeAc("aa", "Living");
@@ -72,7 +73,7 @@ test("HonAirConditioner loads preset_fan.json", async () => {
   await ac.applyPresetFile(path.resolve(__dirname, "..", "presets", "preset_fan.json"));
 
   assert.equal(sent.command, "startProgram");
-  assert.equal(sent.programName, "PROGRAM.IOT_UV_AND_COOL");
+  assert.equal(sent.programName, "PROGRAM.IOT_UV_AND_FAN");
   assert.deepEqual(sent.params, {
     tempSel: 24,
     windSpeed: "2",
@@ -142,6 +143,38 @@ test("HonAirConditioner maps explicit presets to real iot capabilities", async (
   });
 });
 
+test("HonAirConditioner logs preset apply timing when debug logger is enabled", async () => {
+  const appliance = realCapabilityAc();
+  appliance.api = {
+    sendCommand: async () => true
+  };
+  const lines = [];
+  const times = [
+    new Date("2026-01-30T15:30:16"),
+    new Date("2026-01-30T15:30:17"),
+    new Date("2026-01-30T15:30:26")
+  ];
+  const logger = new DebugLogger({
+    enabled: true,
+    sink: (line) => lines.push(line),
+    now: () => times.shift()
+  });
+
+  await new HonAirConditioner(appliance, logger).applyPreset({
+    mode: "iot_uv_and_cool",
+    tempSel: "24",
+    windSpeed: "2",
+    windDirectionVertical: "2",
+    healthMode: "1"
+  }, "uv_fan");
+
+  assert.deepEqual(lines, [
+    "2026-01-30 15:30:16: Turning on preset: \"uv_fan\"...",
+    "2026-01-30 15:30:17: Selected preset command: \"startProgram\" (PROGRAMS.AC.IOT_UV_AND_COOL)",
+    "2026-01-30 15:30:26: Turned on preset: \"uv_fan\" (10secs)"
+  ]);
+});
+
 test("HonAirConditioner prefers startProgram over settings for presets", async () => {
   const appliance = presetAc();
   appliance.commands.settings = new HonCommand("settings", presetCommandAttributes(), appliance);
@@ -180,9 +213,11 @@ function presetAc() {
   const categories = {};
   const cleaning = new HonCommand("startProgram", presetCommandAttributes(), appliance, categories, "PROGRAM.IOT_SELF_CLEAN");
   const fan = new HonCommand("startProgram", presetCommandAttributes(), appliance, categories, "PROGRAM.IOT_FAN");
+  const uvFan = new HonCommand("startProgram", presetCommandAttributes(), appliance, categories, "PROGRAM.IOT_UV_AND_FAN");
   const cool = new HonCommand("startProgram", presetCommandAttributes(), appliance, categories, "PROGRAM.IOT_UV_AND_COOL");
   categories.iot_self_clean = cleaning;
   categories.iot_fan = fan;
+  categories.iot_uv_and_fan = uvFan;
   categories.iot_uv_and_cool = cool;
   appliance.commands.startProgram = cleaning;
   return appliance;

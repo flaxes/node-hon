@@ -10,10 +10,19 @@ async function main() {
     await client.create();
     const acId = process.env.AC_ID;
     if (!acId) {
+      console.log("AC_ID not provided");
+
       await printAvailable(client);
-      throw new ApplianceNotFoundError("Set AC_ID to one of the listed identifiers");
+      throw new ApplianceNotFoundError(
+        "Set AC_ID to one of the listed identifiers",
+      );
     }
-    const ac = await client.getAirConditionerById(acId);
+    const ac = await client.getAirConditionerByIdFast(acId);
+
+    if (!ac) {
+      throw new ApplianceNotFoundError("Cannot create appliance. Check AC_ID");
+    }
+
     await ac.powerOff();
     console.log(`Turned off ${ac.nickName} (${ac.macAddress})`);
   } finally {
@@ -25,7 +34,9 @@ async function printAvailable(client) {
   const airConditioners = await client.getAirConditioners();
   console.log("Available air conditioners:");
   for (const ac of airConditioners) {
-    console.log(`- macAddress=${ac.macAddress} uniqueId=${ac.uniqueId} nickName=${ac.nickName}`);
+    console.log(
+      `- macAddress=${ac.macAddress} uniqueId=${ac.uniqueId} nickName=${ac.nickName}`,
+    );
   }
 }
 
@@ -33,10 +44,13 @@ main().catch((error) => {
   if (error instanceof ApplianceNotFoundError && error.details?.available) {
     console.error(error.message);
     for (const ac of error.details.available) {
-      console.error(`- macAddress=${ac.macAddress} uniqueId=${ac.uniqueId} nickName=${ac.nickName}`);
+      console.error(
+        `- macAddress=${ac.macAddress} uniqueId=${ac.uniqueId} nickName=${ac.nickName}`,
+      );
     }
   } else {
     console.error(error);
   }
   process.exitCode = 1;
 });
+

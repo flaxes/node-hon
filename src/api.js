@@ -5,9 +5,10 @@ const { HonConnection, HonAnonymousConnection } = require("./connection");
 const { HonApiError } = require("./errors");
 
 class HonAPI {
-  constructor(auth, device, fetchImpl = globalThis.fetch) {
+  constructor(auth, device, fetchImpl = globalThis.fetch, logger = null) {
     this.auth = auth;
     this.device = device;
+    this.logger = logger;
     this.hon = new HonConnection(auth, fetchImpl);
     this.anonymous = new HonAnonymousConnection(fetchImpl);
   }
@@ -81,6 +82,8 @@ class HonAPI {
   }
 
   async sendCommand(appliance, command, parameters, ancillaryParameters = {}, programName = "") {
+    const label = appliance.nickName || appliance.macAddress;
+    const operation = this.logger?.start(`Sending command: "${command}" to "${label}"...`);
     const now = new Date();
     const timestamp = now.toISOString().replace(/\.\d{3}Z$/, `.${String(now.getMilliseconds()).padStart(3, "0")}Z`);
     const data = {
@@ -102,14 +105,20 @@ class HonAPI {
     if (command === "startProgram" && programName) {
       data.programName = programName.toUpperCase();
     }
-    const response = await this.hon.post(`${constants.API_URL}/commands/v1/send`, {
-      body: JSON.stringify(data)
-    });
-    const result = await response.json();
-    if (result?.payload?.resultCode === "0") {
-      return true;
+    try {
+      const response = await this.hon.post(`${constants.API_URL}/commands/v1/send`, {
+        body: JSON.stringify(data)
+      });
+      const result = await response.json();
+      if (result?.payload?.resultCode === "0") {
+        operation?.success(`Command sent: "${command}" to "${label}"`);
+        return true;
+      }
+      throw new HonApiError("Can't send command", { payload: result, request: data });
+    } catch (error) {
+      operation?.failure(`Command failed: "${command}" to "${label}"`);
+      throw error;
     }
-    throw new HonApiError("Can't send command", { payload: result, request: data });
   }
 }
 

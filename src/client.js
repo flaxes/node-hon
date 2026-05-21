@@ -8,13 +8,20 @@ const { HonAPI } = require("./api");
 const { HonAppliance, isAirConditioner } = require("./appliance");
 const { HonAirConditioner } = require("./ac");
 const { ApplianceNotFoundError } = require("./errors");
+const { DebugLogger } = require("./logger");
 
 class HonClient {
   constructor(config = {}) {
     this.config = config;
     this.fetch = config.fetch || globalThis.fetch;
+    this.logger =
+      config.logger || new DebugLogger({ enabled: Boolean(config.debug) });
     this.device = new HonDevice(config.mobileId);
-    const sessionFile = config.sessionFile ? path.resolve(config.sessionFile) : "";
+    const sessionFile = config.sessionFile
+      ? path.resolve(config.sessionFile)
+      : "";
+
+    /** @type {SessionStore | null} */
     this.sessionStore = sessionFile ? new SessionStore(sessionFile) : null;
     this.auth = new HonAuth({
       email: config.email,
@@ -22,38 +29,104 @@ class HonClient {
       device: this.device,
       fetchImpl: this.fetch,
       sessionStore: this.sessionStore,
-      debug: Boolean(config.debug)
+      debug: Boolean(config.debug),
+      logger: this.logger,
     });
-    this.api = new HonAPI(this.auth, this.device, this.fetch);
+    this.api = new HonAPI(this.auth, this.device, this.fetch, this.logger);
     this.appliances = [];
   }
 
   async create() {
-    await this.login();
-    await this.setup();
+    const operation = this.logger.start("Creating hOn client...");
+    try {
+      await this.login();
+      // await this.setup();
+      operation.success("hOn client ready");
+    } catch (error) {
+      operation.failure("hOn client setup failed");
+      throw error;
+    }
     return this;
   }
 
   async login() {
-    await this.auth.initialize();
+    const operation = this.logger.start("Trying to login...");
+    try {
+      await this.auth.initialize();
+      operation.success("Login success");
+    } catch (error) {
+      operation.failure("Login failed");
+      throw error;
+    }
     return this;
   }
 
   async refresh() {
-    return this.auth.refresh();
+    const operation = this.logger.start("Refreshing login...");
+    try {
+      const result = await this.auth.refresh();
+      operation.success(result ? "Refresh success" : "Refresh skipped");
+      return result;
+    } catch (error) {
+      operation.failure("Refresh failed");
+      throw error;
+    }
+  }
+
+  async setupOne(id) {
+    const appliances = await this.api.loadAppliances();
+    for (const applianceData of appliances) {
+      const appliance = new HonAppliance(this.api, applianceData);
+      if (appliance.uniqueId === id) {
+        return this.#createApplianceSetup(appliance);
+      }
+    }
   }
 
   async setup() {
-    this.appliances = [];
-    const appliances = await this.api.loadAppliances();
-    for (const applianceData of appliances) {
-      const zones = Number(applianceData.zone || 0);
-      if (zones > 1) {
-        for (let zone = 1; zone <= zones; zone += 1) {
-          await this.createAppliance({ ...applianceData }, zone);
+    const operation = this.logger.start("Loading appliances...");
+
+    try {
+      const appliances = await this.api.loadAppliances();
+      for (const applianceData of appliances) {
+        const zones = Number(applianceData.zone || 0);
+        if (zones > 1) {
+          for (let zone = 1; zone <= zones; zone += 1) {
+            await this.createAppliance({ ...applianceData }, zone);
+          }
         }
+        await this.createAppliance(applianceData);
       }
-      await this.createAppliance(applianceData);
+      operation.success(`Loaded ${this.appliances.length} appliance(s)`);
+    } catch (error) {
+      operation.failure("Loading appliances failed");
+      throw error;
+    }
+  }
+
+  /**
+   * @param {HonAppliance} appliance
+   */
+  async #createApplianceSetup(appliance) {
+    const label = appliance.nickName || appliance.macAddress;
+    if (!this.appliances) this.appliances = [];
+    const operation = this.logger.start(`Loading appliance: "${label}"...`);
+
+    try {
+      const promises = [
+        appliance.loadCommands(),
+        appliance.loadAttributes(),
+        appliance.loadStatistics(),
+      ];
+      await Promise.all(promises);
+
+      this.appliances.push(appliance);
+      operation.success(`Loaded appliance: "${label}"`);
+
+      return appliance;
+    } catch (error) {
+      operation.failure(`Loading appliance failed: "${label}"`);
+      throw error;
     }
   }
 
@@ -62,10 +135,8 @@ class HonClient {
     if (!appliance.macAddress) {
       return;
     }
-    await appliance.loadCommands();
-    await appliance.loadAttributes();
-    await appliance.loadStatistics();
-    this.appliances.push(appliance);
+
+    return this.#createApplianceSetup(appliance);
   }
 
   async getAppliances() {
@@ -77,13 +148,24 @@ class HonClient {
 
   async getAirConditioners() {
     const appliances = await this.getAppliances();
-    return appliances.filter(isAirConditioner).map((appliance) => new HonAirConditioner(appliance));
+    return appliances
+      .filter(isAirConditioner)
+      .map((appliance) => new HonAirConditioner(appliance, this.logger));
+  }
+
+  async getAirConditionerByIdFast(id) {
+    const appliance = await this.setupOne(id);
+    if (!appliance) return;
+
+    return new HonAirConditioner(appliance, this.logger);
   }
 
   async getAirConditionerById(id) {
     const airConditioners = await this.getAirConditioners();
     if (!id) {
-      throw new ApplianceNotFoundError("AC_ID is required", { available: airConditioners.map((ac) => ac.identifiers) });
+      throw new ApplianceNotFoundError("AC_ID is required", {
+        available: airConditioners.map((ac) => ac.identifiers),
+      });
     }
     const fields = ["macAddress", "uniqueId", "nickName"];
     for (const field of fields) {
@@ -92,17 +174,23 @@ class HonClient {
         return matches[0];
       }
       if (matches.length > 1) {
-        throw new ApplianceNotFoundError(`AC_ID matches multiple air conditioners by ${field}`, {
-          id,
-          field,
-          matches: matches.map((ac) => ac.identifiers)
-        });
+        throw new ApplianceNotFoundError(
+          `AC_ID matches multiple air conditioners by ${field}`,
+          {
+            id,
+            field,
+            matches: matches.map((ac) => ac.identifiers),
+          },
+        );
       }
     }
-    throw new ApplianceNotFoundError(`No air conditioner found for AC_ID: ${id}`, {
-      id,
-      available: airConditioners.map((ac) => ac.identifiers)
-    });
+    throw new ApplianceNotFoundError(
+      `No air conditioner found for AC_ID: ${id}`,
+      {
+        id,
+        available: airConditioners.map((ac) => ac.identifiers),
+      },
+    );
   }
 
   async close() {
@@ -111,3 +199,4 @@ class HonClient {
 }
 
 module.exports = { HonClient };
+

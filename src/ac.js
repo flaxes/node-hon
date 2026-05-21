@@ -9,8 +9,9 @@ const POWER_OFF_COMMANDS = ["stopProgram", "stop", "pauseProgram", "powerOff", "
 const PRESET_COMMAND_ORDER = ["startProgram", "settings"];
 
 class HonAirConditioner {
-  constructor(appliance) {
+  constructor(appliance, logger = null) {
     this.appliance = appliance;
+    this.logger = logger;
   }
 
   get macAddress() {
@@ -84,15 +85,25 @@ class HonAirConditioner {
     return this.applyPreset(JSON.parse(text));
   }
 
-  async applyPreset(preset) {
+  async applyPreset(preset, name = "") {
     if (!preset || typeof preset !== "object" || Array.isArray(preset)) {
       throw this.unsupported("preset", { reason: "Preset must be a JSON object" });
     }
-    const resolved = this.resolvePreset(preset);
-    for (const { parameter, value } of resolved.params) {
-      parameter.value = value;
+    const label = name || preset.mode || "custom";
+    const operation = this.logger?.start(`Turning on preset: "${label}"...`);
+    try {
+      const resolved = this.resolvePreset(preset);
+      this.logger?.log(`Selected preset command: "${resolved.command.name}" (${resolved.command.categoryName || "default"})`);
+      for (const { parameter, value } of resolved.params) {
+        parameter.value = value;
+      }
+      const result = await resolved.command.sendSpecific(resolved.params.map(({ key }) => key));
+      operation?.success(`Turned on preset: "${label}"`);
+      return result;
+    } catch (error) {
+      operation?.failure(`Preset failed: "${label}"`);
+      throw error;
     }
-    return resolved.command.sendSpecific(resolved.params.map(({ key }) => key));
   }
 
   resolvePreset(preset) {
