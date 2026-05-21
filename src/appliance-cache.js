@@ -17,7 +17,8 @@ class ApplianceCache {
       }
       return data;
     } catch (error) {
-      if (error && error.code === "ENOENT") {
+      const fileError = /** @type {NodeJS.ErrnoException} */ (error);
+      if (fileError && fileError.code === "ENOENT") {
         return emptyCache();
       }
       throw error;
@@ -53,6 +54,10 @@ function emptyCache() {
   return { version: CACHE_VERSION, appliances: [] };
 }
 
+/**
+ * @param {{ macAddress?: string, uniqueId?: string, nickName?: string } | null | undefined} record
+ * @param {string} id
+ */
 function recordMatches(record, id) {
   if (!record || !id) {
     return false;

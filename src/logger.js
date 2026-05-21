@@ -1,4 +1,7 @@
 class DebugLogger {
+  /**
+   * @param {{ enabled?: boolean, sink?: (line: string) => void, now?: () => Date }} [options]
+   */
   constructor({ enabled = false, sink = console.log, now = () => new Date() } = {}) {
     this.enabled = Boolean(enabled);
     this.sink = sink;

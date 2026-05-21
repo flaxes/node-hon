@@ -31,6 +31,7 @@ test("HonClient reports missing and ambiguous AC_ID with candidates", async () =
 
 test("HonAirConditioner maps helper controls to discovered command parameters", async () => {
   const appliance = fakeAc("aa", "Living");
+  /** @type {{ command: string, params: any } | null} */
   let sent = null;
   appliance.api = {
     sendCommand: async (_appliance, command, params) => {
@@ -59,6 +60,7 @@ test("HonAirConditioner throws UnsupportedControlError for missing controls", as
 
 test("HonAirConditioner loads preset_fan.json", async () => {
   const appliance = presetAc();
+  /** @type {{ command: string, params: any, programName: string } | null} */
   let sent = null;
   appliance.api = {
     sendCommand: async (_appliance, command, params, _ancillary, programName) => {
@@ -70,9 +72,11 @@ test("HonAirConditioner loads preset_fan.json", async () => {
 
   await ac.applyPresetFile(path.resolve(__dirname, "..", "presets", "preset_fan.json"));
 
-  assert.equal(sent.command, "startProgram");
-  assert.equal(sent.programName, "PROGRAM.IOT_UV_AND_FAN");
-  assert.deepEqual(sent.params, {
+  assert.ok(sent);
+  const actual = /** @type {{ command: string, params: any, programName: string }} */ (sent);
+  assert.equal(actual.command, "startProgram");
+  assert.equal(actual.programName, "PROGRAM.IOT_UV_AND_FAN");
+  assert.deepEqual(actual.params, {
     tempSel: 24,
     windSpeed: "2",
     windDirectionVertical: "2",
@@ -84,6 +88,7 @@ test("HonAirConditioner loads preset_fan.json", async () => {
 test("HonAirConditioner applies presets with one command and switches out of cleaning category", async () => {
   const appliance = presetAc();
   let calls = 0;
+  /** @type {{ command: string, params: any, programName: string } | null} */
   let sent = null;
   appliance.api = {
     sendCommand: async (_appliance, command, params, _ancillary, programName) => {
@@ -102,9 +107,11 @@ test("HonAirConditioner applies presets with one command and switches out of cle
   });
 
   assert.equal(calls, 1);
-  assert.equal(sent.command, "startProgram");
-  assert.equal(sent.programName, "PROGRAM.IOT_FAN");
-  assert.deepEqual(sent.params, {
+  assert.ok(sent);
+  const actual = /** @type {{ command: string, params: any, programName: string }} */ (sent);
+  assert.equal(actual.command, "startProgram");
+  assert.equal(actual.programName, "PROGRAM.IOT_FAN");
+  assert.deepEqual(actual.params, {
     windDirection: "2",
     windSpeed: "2",
     healthMode: "1"
@@ -113,6 +120,7 @@ test("HonAirConditioner applies presets with one command and switches out of cle
 
 test("HonAirConditioner maps explicit presets to real iot capabilities", async () => {
   const appliance = realCapabilityAc();
+  /** @type {{ command: string, params: any, programName: string } | null} */
   let sent = null;
   appliance.api = {
     sendCommand: async (_appliance, command, params, _ancillary, programName) => {
@@ -155,7 +163,7 @@ test("HonAirConditioner logs preset apply timing when debug logger is enabled", 
   const logger = new DebugLogger({
     enabled: true,
     sink: (line) => lines.push(line),
-    now: () => times.shift()
+    now: () => times.shift() || new Date("2026-01-30T15:30:26")
   });
 
   await new HonAirConditioner(appliance, logger).applyPreset({
@@ -176,6 +184,7 @@ test("HonAirConditioner logs preset apply timing when debug logger is enabled", 
 test("HonAirConditioner prefers startProgram over settings for presets", async () => {
   const appliance = presetAc();
   appliance.commands.settings = new HonCommand("settings", presetCommandAttributes(), appliance);
+  /** @type {{ command: string, params: any } | null} */
   let sent = null;
   appliance.api = {
     sendCommand: async (_appliance, command, params) => {
@@ -186,7 +195,9 @@ test("HonAirConditioner prefers startProgram over settings for presets", async (
 
   await new HonAirConditioner(appliance).applyPreset({ windSpeed: "2", healthMode: "1" });
 
-  assert.equal(sent.command, "startProgram");
+  assert.ok(sent);
+  const actual = /** @type {{ command: string, params: any }} */ (sent);
+  assert.equal(actual.command, "startProgram");
 });
 
 test("HonAirConditioner reports unsupported preset fields and values", async () => {

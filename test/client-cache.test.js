@@ -116,7 +116,7 @@ function makeClient(overrides = {}) {
     fetch: async () => jsonResponse({}),
     ...overrides
   });
-  client.api = {
+  client.api = /** @type {any} */ ({
     loadAppliances: async () => {
       calls.loadAppliances += 1;
       return [applianceInfo()];
@@ -149,7 +149,7 @@ function makeClient(overrides = {}) {
       sent.push({ command, params, programName });
       return true;
     }
-  };
+  });
   return { client, cacheFile, calls, sent };
 }
 

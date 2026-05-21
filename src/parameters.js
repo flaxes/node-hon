@@ -22,11 +22,20 @@ class ValueError extends Error {
 }
 
 class HonParameter {
+  /**
+   * @param {string} key
+   * @param {Record<string, any>} [attributes]
+   * @param {string} [group]
+   */
   constructor(key, attributes = {}, group = "") {
     this.key = key;
     this.attributes = attributes;
     this.group = group;
     this.triggers = new Map();
+    this._values = [];
+    this.min = 0;
+    this.max = 0;
+    this.step = 1;
     this.reset();
   }
 
@@ -66,7 +75,10 @@ class HonParameter {
     if (!this.triggers.has(key)) {
       this.triggers.set(key, []);
     }
-    this.triggers.get(key).push([func, data]);
+    const triggers = this.triggers.get(key);
+    if (triggers) {
+      triggers.push([func, data]);
+    }
   }
 
   checkTrigger(value) {
@@ -97,11 +109,13 @@ class HonParameterEnum extends HonParameter {
   }
 
   get internValue() {
-    return this._value == null ? String(this.values[0]) : String(this._value);
+    const fallback = this.values[0] ?? "0";
+    return this._value == null ? String(fallback) : String(this._value);
   }
 
   get value() {
-    return this._value == null ? this.values[0] : cleanValue(this._value);
+    const fallback = this.values[0] ?? "0";
+    return this._value == null ? fallback : cleanValue(this._value);
   }
 
   set value(value) {
@@ -167,6 +181,11 @@ class HonParameterFixed extends HonParameter {
 }
 
 class HonParameterProgram extends HonParameterEnum {
+  /**
+   * @param {string} key
+   * @param {any} command
+   * @param {string} group
+   */
   constructor(key, command, group) {
     super(key, {}, group);
     this.command = command;
@@ -199,13 +218,14 @@ class HonParameterProgram extends HonParameterEnum {
   get ids() {
     const values = {};
     for (const [name, command] of Object.entries(this.programs || {})) {
-      if (name.includes("iot_") || !command.parameters.prCode) {
+      const commandData = /** @type {any} */ (command);
+      if (name.includes("iot_") || !commandData.parameters.prCode) {
         continue;
       }
-      if (command.parameters.favourite && command.parameters.favourite.value === "1") {
+      if (commandData.parameters.favourite && commandData.parameters.favourite.value === "1") {
         continue;
       }
-      values[Number(command.parameters.prCode.value)] = name;
+      values[Number(commandData.parameters.prCode.value)] = name;
     }
     return values;
   }

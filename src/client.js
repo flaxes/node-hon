@@ -10,6 +10,9 @@ const { DebugLogger } = require("./logger");
 const { ApplianceCache } = require("./appliance-cache");
 
 class HonClient {
+  /**
+   * @param {Partial<import("../types/global").ProjectConfig> & { fetch?: typeof fetch, logger?: any }} [config]
+   */
   constructor(config = {}) {
     this.config = config;
     this.fetch = config.fetch || globalThis.fetch;

@@ -14,7 +14,8 @@ class SessionStore {
       const text = await fs.readFile(this.filePath, "utf8");
       return JSON.parse(text);
     } catch (error) {
-      if (error && error.code === "ENOENT") {
+      const fileError = /** @type {NodeJS.ErrnoException} */ (error);
+      if (fileError && fileError.code === "ENOENT") {
         return null;
       }
       throw error;

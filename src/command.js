@@ -2,6 +2,13 @@ const { HonApiError } = require("./errors");
 const { HonParameterFixed, HonParameterProgram, createParameter } = require("./parameters");
 
 class HonCommand {
+  /**
+   * @param {string} name
+   * @param {Record<string, any>} attributes
+   * @param {any} appliance
+   * @param {any} [categories]
+   * @param {string} [categoryName]
+   */
   constructor(name, attributes, appliance, categories = null, categoryName = "") {
     this.name = name;
     this.appliance = appliance;
@@ -209,6 +216,12 @@ class HonCommandLoader {
     this.commands = Object.fromEntries(commands.map((command) => [command.name, command]));
   }
 
+  /**
+   * @param {any} data
+   * @param {string} commandName
+   * @param {any} [categories]
+   * @param {string} [categoryName]
+   */
   parseCommand(data, commandName, categories = null, categoryName = "") {
     if (!data || typeof data !== "object" || Array.isArray(data)) {
       this.additionalData[commandName] = data;

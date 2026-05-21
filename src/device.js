@@ -10,6 +10,7 @@ class HonDevice {
   }
 
   get(mobile = false) {
+    /** @type {{ appVersion: string | number, mobileId: string, os?: string, osVersion: string | number, deviceModel: string, mobileOs?: string }} */
     const result = {
       appVersion: this.appVersion,
       mobileId: this.mobileId,

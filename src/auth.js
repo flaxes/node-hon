@@ -9,6 +9,17 @@ const TOKEN_EXPIRES_AFTER_MS = 8 * 60 * 60 * 1000;
 const TOKEN_EXPIRE_WARNING_MS = 60 * 60 * 1000;
 
 class HonAuth {
+  /**
+   * @param {{
+   *   email?: string,
+   *   password?: string,
+   *   device: any,
+   *   fetchImpl?: typeof fetch,
+   *   sessionStore?: { read: () => Promise<any>, write: (data: any) => Promise<void> } | null,
+   *   debug?: boolean,
+   *   logger?: any
+   * }} options
+   */
   constructor({ email, password, device, fetchImpl = globalThis.fetch, sessionStore = null, debug = false, logger = null }) {
     if (!fetchImpl) {
       throw new HonAuthError("A fetch implementation is required");
@@ -137,7 +148,7 @@ class HonAuth {
       operation?.failure("Refresh failed");
       return false;
     }
-    const data = await response.json();
+    const data = /** @type {{ id_token?: string, access_token?: string }} */ (await response.json());
     this.auth.idToken = data.id_token || "";
     this.auth.accessToken = data.access_token || "";
     this.auth.expiresAt = new Date(Date.now() + TOKEN_EXPIRES_AFTER_MS).toISOString();
@@ -175,11 +186,13 @@ class HonAuth {
         throw new NoLoginNeeded();
       }
       await this.logAuthError(response);
+      throw new HonAuthError("Missing login URL");
     }
-    if (loginUrl[1].startsWith("/NewhOnLogin")) {
-      return `${constants.AUTH_API}/s/login${loginUrl[1]}`;
+    const nextLoginUrl = loginUrl[1] || "";
+    if (nextLoginUrl.startsWith("/NewhOnLogin")) {
+      return `${constants.AUTH_API}/s/login${nextLoginUrl}`;
     }
-    return loginUrl[1];
+    return nextLoginUrl;
   }
 
   async manualRedirect(url) {
@@ -200,12 +213,13 @@ class HonAuth {
       const context = text.match(/"fwuid":"(.*?)","loaded":(\{.*?\})/);
       if (!context) {
         await this.logAuthError(response);
+        throw new HonAuthError("Missing login context");
       }
       return {
         loginUrl,
         urlPath: loginUrl.replace(constants.AUTH_API, ""),
-        fwUid: context[1],
-        loaded: JSON.parse(context[2])
+        fwUid: context[1] || "",
+        loaded: JSON.parse(context[2] || "{}")
       };
     } catch (error) {
       if (error instanceof NoLoginNeeded) {
@@ -255,8 +269,8 @@ class HonAuth {
     });
     if (response.status === 200) {
       try {
-        const result = await response.json();
-        const url = result.events[0].attributes.values.url;
+        const result = /** @type {{ events?: Array<{ attributes?: { values?: { url?: string } } }> }} */ (await response.json());
+        const url = result.events?.[0]?.attributes?.values?.url;
         if (url) {
           return url;
         }
@@ -317,9 +331,10 @@ class HonAuth {
       headers: { "id-token": this.auth.idToken, "Content-Type": "application/json" },
       body: JSON.stringify(this.device.get())
     });
+    /** @type {{ cognitoUser?: { Token?: string } } | undefined} */
     let data;
     try {
-      data = await response.json();
+      data = /** @type {{ cognitoUser?: { Token?: string } }} */ (await response.json());
     } catch (error) {
       await this.logAuthError(response);
     }

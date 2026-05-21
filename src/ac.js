@@ -7,6 +7,10 @@ const POWER_OFF_COMMANDS = ["stopProgram", "stop", "pauseProgram", "powerOff", "
 const PRESET_COMMAND_ORDER = ["startProgram", "settings"];
 
 class HonAirConditioner {
+  /**
+   * @param {any} appliance
+   * @param {any} [logger]
+   */
   constructor(appliance, logger = null) {
     this.appliance = appliance;
     this.logger = logger;

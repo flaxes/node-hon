@@ -217,6 +217,11 @@ class HonAppliance {
     }
   }
 
+  /**
+   * @param {string} main
+   * @param {string | string[] | null} [target]
+   * @param {string | string[] | null} [toSync]
+   */
   syncCommand(main, target = null, toSync = null) {
     const base = this.commands[main];
     if (!base) {

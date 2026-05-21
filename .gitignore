@@ -1,4 +1,5 @@
 /config.js
+node_modules/
 .hon-session.json
 .hon-appliance-cache.json
 .hon-devices.json

@@ -30,7 +30,7 @@ test("DebugLogger logs operation start and success with elapsed time", () => {
   const logger = new DebugLogger({
     enabled: true,
     sink: (line) => lines.push(line),
-    now: () => times.shift()
+    now: () => times.shift() || new Date("2026-01-30T15:30:15")
   });
 
   const operation = logger.start("Trying to login...");

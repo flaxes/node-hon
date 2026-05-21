@@ -36,6 +36,7 @@ test("HonAuth reuses valid session file data", async () => {
 
 test("HonAuth refreshes expired session data and writes updated session", async () => {
   const calls = [];
+  /** @type {{ refreshToken: string, sessionToken: string } | null} */
   let written = null;
   const auth = new HonAuth({
     email: "u",
@@ -68,8 +69,10 @@ test("HonAuth refreshes expired session data and writes updated session", async 
 
   assert.equal(auth.sessionToken, "new-session");
   assert.equal(auth.idToken, "new-id");
-  assert.equal(written.refreshToken, "refresh");
-  assert.equal(written.sessionToken, "new-session");
+  assert.ok(written);
+  const stored = /** @type {{ refreshToken: string, sessionToken: string }} */ (written);
+  assert.equal(stored.refreshToken, "refresh");
+  assert.equal(stored.sessionToken, "new-session");
   assert.equal(calls.length, 2);
 });
 

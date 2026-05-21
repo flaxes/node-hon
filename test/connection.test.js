@@ -18,6 +18,7 @@ test("HonConnection injects auth headers and retries once after 401", async () =
     }
   };
   const connection = new HonConnection(auth, async (_url, options) => {
+    assert.ok(options);
     headers.push(options.headers);
     return new Response(JSON.stringify({ ok: true }), { status: headers.length === 1 ? 401 : 200 });
   });
