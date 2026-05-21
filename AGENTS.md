@@ -7,7 +7,7 @@
 The main manual flow is applying an AC preset:
 
 ```powershell
-$env:AC_ID="<mac-address>"; node cli/ac_apply_preset.js
+node-hon apply <mac-or-name> preset_fan
 ```
 
 `PRESET_NAME` is optional and defaults to `preset_fan`.
@@ -70,7 +70,7 @@ To refresh cached command data:
 - delete `/.hon-appliance-cache.json`, or
 - set `forceApplianceCacheRefresh: true` in `config.js`
 
-Discovery and diagnostics examples may still use live API data.
+Discovery and preset generation use live API data.
 
 ## Presets
 
@@ -111,4 +111,9 @@ node cli/show_my_ac_devices.js
 node cli/show_my_ac_capabilities.js
 $env:AC_ID="<mac-address>"; node cli/ac_apply_preset.js
 $env:AC_ID="<mac-address>"; $env:PRESET_NAME="preset_fan"; node cli/ac_apply_preset.js
+node-hon apply xx-xx-xx-xx-xx-xx preset_fan
+node-hon apply Bedroom preset_fan
+node-hon apply bedroom off
+node-hon list
+node-hon generate-preset
 ```

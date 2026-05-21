@@ -51,7 +51,12 @@ class HonAppliance {
   }
 
   get nickName() {
-    const result = this.checkNameZone("nickName");
+    const result =
+      this.checkNameZone("nickName") ||
+      this.checkNameZone("applianceName") ||
+      this.checkNameZone("applianceNickName") ||
+      this.checkNameZone("applianceNickname") ||
+      this.checkNameZone("name");
     if (!result || /^[xX1\s-]+$/.test(result)) {
       return this.modelName;
     }

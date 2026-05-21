@@ -25,18 +25,29 @@ node cli/show_my_ac_devices.js
 
 Use `show_my_ac_devices.js` to find identifiers for manual tests. Use the AC `macAddress` as `AC_ID` when possible. If `AC_ID` is omitted, the preset apply CLI prints available air conditioners with `macAddress`, `uniqueId`, and `nickName`.
 
-`ac_apply_preset.js` reads `PRESET_NAME`, defaulting to `preset_fan`, and loads presets from `presets/`. Use `show_my_ac_capabilities.js` to inspect real command keys and values when a preset needs another alias.
+`ac_apply_preset.js` reads `PRESET_NAME`, defaulting to `preset_fan`, and loads presets from `presets/`.
 
 Preset runs use a local appliance command cache at `.hon-appliance-cache.json` by default. Delete that file, or set `forceApplianceCacheRefresh: true` in `config.js`, when the appliance command model changes or a preset cannot find a parameter that exists in the app.
 
-Generate a preset from exported capabilities:
+When installed globally, use the `node-hon` command:
 
 ```bash
-node cli/show_my_ac_capabilities.js
+node-hon apply xx-xx-xx-xx-xx-xx preset_fan
+node-hon apply Bedroom preset_fan
+node-hon apply bedroom off
+node-hon list
+node-hon generate-preset
+```
+
+The AC identifier can be a MAC address, unique ID, or nickname. Nickname lookup is case-insensitive.
+
+Generate a preset from live hOn capabilities:
+
+```bash
 node cli/ac_generate_preset.js
 ```
 
-`ac_generate_preset.js` reads `hon-devices-capabilities.json` by default. You can set `CAPABILITIES_FILE`, `AC_ID`, or `PRESET_NAME` to preselect the input file, air conditioner, or output preset name.
+`ac_generate_preset.js` loads the latest AC capabilities from the hOn API. You can set `AC_ID` or `PRESET_NAME` to preselect the air conditioner or output preset name.
 
 Example:
 
@@ -57,4 +68,3 @@ npm test
 
 This project is released under the MIT License.  
 The original Python library is also MIT-licensed. See the `LICENSE` file for details and attribution.
-

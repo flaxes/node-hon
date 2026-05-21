@@ -2,24 +2,28 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const readline = require("node:readline/promises");
 const { stdin: input, stdout: output } = require("node:process");
+const { ApplianceNotFoundError } = require("../src");
+const getClient = require("./_get-client");
 const {
   buildPreset,
   defaultValueForField,
   getFieldDescriptors,
   getModeOptions,
-  listAirConditioners,
-  loadCapabilitiesFile,
-  selectAirConditioner,
   selectPresetCommand
 } = require("../src/preset-generator");
 
-async function main() {
-  const capabilitiesFile = path.resolve(process.cwd(), process.env.CAPABILITIES_FILE || "hon-devices-capabilities.json");
-  const capabilities = loadCapabilitiesFile(capabilitiesFile);
+async function main(options = {}) {
+  const baseDir = options.baseDir || path.resolve(__dirname, "..");
+  const client = await getClient({ ...options, baseDir });
   const rl = readline.createInterface({ input, output });
   try {
-    const selectedAc = await promptAc(rl, capabilities);
-    const selectedCommand = selectPresetCommand(selectedAc.capabilities);
+    const airConditioners = await client.getAirConditioners();
+    if (!airConditioners.length) {
+      console.log("No air conditioners found.");
+      return;
+    }
+    const selectedAc = await promptAc(rl, airConditioners, options.acId);
+    const selectedCommand = selectPresetCommand(selectedAc.capabilities());
     const generatorMode = await promptChoice(rl, "Generator mode", ["basic", "advanced"], "basic");
     const modeOptions = getModeOptions(selectedCommand.command);
     const presetMode = modeOptions.length ? await promptChoice(rl, "Preset mode", modeOptions, modeOptions[0]) : "";
@@ -29,33 +33,56 @@ async function main() {
       values[field.name] = await promptField(rl, field);
     }
     const preset = buildPreset(selectedCommand.command, values, presetMode);
-    const presetName = await promptPresetName(rl);
-    const outputFile = path.resolve(__dirname, "..", "presets", `${presetName}.json`);
+    const presetName = await promptPresetName(rl, options.presetName);
+    const outputFile = path.resolve(baseDir, "presets", `${presetName}.json`);
     await fs.mkdir(path.dirname(outputFile), { recursive: true });
     await fs.writeFile(outputFile, `${JSON.stringify(preset, null, 2)}\n`);
-    console.log(`Generated ${path.relative(process.cwd(), outputFile)} for ${selectedAc.name}`);
+    console.log(`Generated ${path.relative(process.cwd(), outputFile)} for ${selectedAc.nickName} (${selectedAc.macAddress})`);
     console.log(`Selected command: ${selectedCommand.name}${presetMode ? ` (${presetMode})` : ""}`);
     printSkipped(skipped);
   } finally {
     rl.close();
+    await client.close();
   }
 }
 
-async function promptAc(rl, capabilities) {
-  if (process.env.AC_ID) {
-    return selectAirConditioner(capabilities, process.env.AC_ID);
+async function promptAc(rl, airConditioners, acId = "") {
+  const selectedId = acId || process.env.AC_ID;
+  if (selectedId) {
+    const matches = airConditioners.filter((ac) => {
+      return (
+        ac.macAddress === selectedId ||
+        ac.uniqueId === selectedId ||
+        ac.nickName === selectedId ||
+        ac.nickName.toLowerCase() === selectedId.toLowerCase()
+      );
+    });
+    if (matches.length === 1) {
+      return matches[0];
+    }
+    if (matches.length > 1) {
+      throw new ApplianceNotFoundError(`AC_ID matches multiple air conditioners: ${selectedId}`, {
+        id: selectedId,
+        matches: matches.map((ac) => ac.identifiers)
+      });
+    }
+    throw new ApplianceNotFoundError(`No air conditioner found for AC_ID: ${selectedId}`, {
+      id: selectedId,
+      available: airConditioners.map((ac) => ac.identifiers)
+    });
   }
-  const names = listAirConditioners(capabilities);
-  if (names.length === 1) {
-    console.log(`Selected AC: ${names[0]}`);
-    return selectAirConditioner(capabilities, names[0]);
+  if (airConditioners.length === 1) {
+    const ac = airConditioners[0];
+    console.log(`Selected AC: ${ac.nickName} (${ac.macAddress})`);
+    return ac;
   }
-  const selected = await promptChoice(rl, "Air conditioner", names, names[0]);
-  return selectAirConditioner(capabilities, selected);
+  const choices = airConditioners.map((ac) => `${ac.nickName} (${ac.macAddress})`);
+  const selected = await promptChoice(rl, "Air conditioner", choices, choices[0]);
+  return airConditioners[choices.indexOf(selected)];
 }
 
-async function promptPresetName(rl) {
-  const fallback = process.env.PRESET_NAME || "preset_custom";
+async function promptPresetName(rl, presetName = "") {
+  const fallback = presetName || process.env.PRESET_NAME || "preset_custom";
   for (;;) {
     const answer = (await rl.question(`Preset filename [${fallback}]: `)).trim() || fallback;
     const safe = answer.replace(/\.json$/i, "");
@@ -109,7 +136,11 @@ function printSkipped(skipped) {
   }
 }
 
-main().catch((error) => {
+if (require.main === module) {
+  main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
-});
+  });
+}
+
+module.exports = { main };

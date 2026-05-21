@@ -8,6 +8,7 @@ const { HonAirConditioner } = require("./ac");
 const { ApplianceNotFoundError } = require("./errors");
 const { DebugLogger } = require("./logger");
 const { ApplianceCache } = require("./appliance-cache");
+const { findApplianceIdentifierMatches } = require("./appliance-identity");
 
 class HonClient {
   /**
@@ -79,11 +80,18 @@ class HonClient {
 
   async setupOne(id) {
     const appliances = await this.api.loadAppliances();
-    for (const applianceData of appliances) {
-      const appliance = new HonAppliance(this.api, applianceData);
-      if ([appliance.macAddress, appliance.uniqueId, appliance.nickName].includes(id)) {
-        return this.#createApplianceSetup(appliance);
-      }
+    const airConditioners = appliances
+      .map((applianceData) => new HonAppliance(this.api, applianceData))
+      .filter(isAirConditioner);
+    const matches = findApplianceIdentifierMatches(airConditioners, id);
+    if (matches.length > 1) {
+      throw new ApplianceNotFoundError(`AC_ID matches multiple air conditioners: ${id}`, {
+        id,
+        matches: matches.map(({ item }) => item.toCacheRecord())
+      });
+    }
+    if (matches.length === 1) {
+      return this.#createApplianceSetup(matches[0].item);
     }
   }
 
@@ -94,8 +102,19 @@ class HonClient {
     if (!this.forceApplianceCacheRefresh) {
       const operation = this.logger.start(`Loading AC from cache: "${id}"...`);
       try {
-        const record = await this.applianceCache.find(id);
-        if (record) {
+        const records = await this.applianceCache.findAll(id);
+        if (records.length > 1) {
+          throw new ApplianceNotFoundError(`AC_ID matches multiple cached air conditioners: ${id}`, {
+            id,
+            matches: records.map((record) => ({
+              macAddress: record.macAddress,
+              uniqueId: record.uniqueId,
+              nickName: record.nickName
+            }))
+          });
+        }
+        if (records.length === 1) {
+          const record = records[0];
           const appliance = HonAppliance.fromCacheRecord(this.api, record);
           operation.success(`Loaded AC from cache: "${id}"`);
           return new HonAirConditioner(appliance, this.logger);
@@ -103,6 +122,9 @@ class HonClient {
         operation.failure(`AC cache miss: "${id}"`);
       } catch (error) {
         operation.failure(`AC cache failed: "${id}"`);
+        if (error instanceof ApplianceNotFoundError) {
+          throw error;
+        }
       }
     }
 
@@ -201,22 +223,18 @@ class HonClient {
         available: airConditioners.map((ac) => ac.identifiers),
       });
     }
-    const fields = ["macAddress", "uniqueId", "nickName"];
-    for (const field of fields) {
-      const matches = airConditioners.filter((ac) => ac[field] === id);
-      if (matches.length === 1) {
-        return matches[0];
-      }
-      if (matches.length > 1) {
-        throw new ApplianceNotFoundError(
-          `AC_ID matches multiple air conditioners by ${field}`,
-          {
-            id,
-            field,
-            matches: matches.map((ac) => ac.identifiers),
-          },
-        );
-      }
+    const matches = findApplianceIdentifierMatches(airConditioners, id);
+    if (matches.length === 1) {
+      return matches[0].item;
+    }
+    if (matches.length > 1) {
+      throw new ApplianceNotFoundError(
+        `AC_ID matches multiple air conditioners`,
+        {
+          id,
+          matches: matches.map(({ item }) => item.identifiers),
+        },
+      );
     }
     throw new ApplianceNotFoundError(
       `No air conditioner found for AC_ID: ${id}`,

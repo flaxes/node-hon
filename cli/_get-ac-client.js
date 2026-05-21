@@ -1,9 +1,9 @@
 const { ApplianceNotFoundError } = require("../src");
 const getClient = require("./_get-client");
 
-async function getAcClient() {
-  const client = await getClient();
-  const acId = process.env.AC_ID;
+async function getAcClient(options = {}) {
+  const client = await getClient(options);
+  const acId = options.acId || process.env.AC_ID;
   if (!acId) {
     await printAvailable(client);
     throw new ApplianceNotFoundError(

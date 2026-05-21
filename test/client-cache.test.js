@@ -51,6 +51,98 @@ test("cache hit skips live setup calls and can apply a preset", async () => {
   });
 });
 
+test("cache hit can find AC by exact nickname", async () => {
+  const { client, cacheFile, calls } = makeClient();
+  await fs.writeFile(cacheFile, JSON.stringify(cacheWithAc(), null, 2), "utf8");
+
+  const ac = await client.getAirConditionerByIdCached("Living");
+
+  assert.equal(ac.macAddress, "aa");
+  assert.equal(calls.loadAppliances, 0);
+});
+
+test("cache hit can find AC by case-insensitive nickname", async () => {
+  const { client, cacheFile, calls } = makeClient();
+  await fs.writeFile(cacheFile, JSON.stringify(cacheWithAc(), null, 2), "utf8");
+
+  const ac = await client.getAirConditionerByIdCached("living");
+
+  assert.equal(ac.macAddress, "aa");
+  assert.equal(calls.loadAppliances, 0);
+});
+
+test("cache hit reports ambiguous case-insensitive nicknames", async () => {
+  const { client, cacheFile, calls } = makeClient();
+  const cache = cacheWithAc();
+  cache.appliances.push({
+    ...cache.appliances[0],
+    info: { ...cache.appliances[0].info, macAddress: "bb", nickName: "living" },
+    macAddress: "bb",
+    uniqueId: "bb",
+    nickName: "living"
+  });
+  await fs.writeFile(cacheFile, JSON.stringify(cache, null, 2), "utf8");
+
+  await assert.rejects(() => client.getAirConditionerByIdCached("LIVING"));
+
+  assert.equal(calls.loadAppliances, 0);
+});
+
+test("cache miss can refresh AC by case-insensitive nickname", async () => {
+  const { client, calls } = makeClient();
+
+  const ac = await client.getAirConditionerByIdCached("living");
+
+  assert.equal(ac.macAddress, "aa");
+  assert.equal(calls.loadAppliances, 1);
+});
+
+test("cache miss can refresh AC by applianceName alias", async () => {
+  const { client, calls } = makeClient();
+  const { nickName: _nickName, ...info } = /** @type {any} */ (applianceInfo());
+  info.applianceName = "BedRoom";
+  client.api.loadAppliances = async () => {
+    calls.loadAppliances += 1;
+    return [info];
+  };
+
+  const ac = await client.getAirConditionerByIdCached("bedroom");
+
+  assert.equal(ac.macAddress, "aa");
+  assert.equal(ac.nickName, "BedRoom");
+  assert.equal(calls.loadAppliances, 1);
+});
+
+test("cache hit can find AC by applianceName alias inside cached info", async () => {
+  const { client, cacheFile, calls } = makeClient();
+  const cache = cacheWithAc();
+  cache.appliances[0].nickName = "Air Conditioner";
+  const { nickName: _cachedNickName, ...info } = /** @type {any} */ (cache.appliances[0].info);
+  cache.appliances[0].info = /** @type {any} */ ({ ...info, applianceName: "BedRoom" });
+  await fs.writeFile(cacheFile, JSON.stringify(cache, null, 2), "utf8");
+
+  const ac = await client.getAirConditionerByIdCached("bedroom");
+
+  assert.equal(ac.macAddress, "aa");
+  assert.equal(ac.nickName, "BedRoom");
+  assert.equal(calls.loadAppliances, 0);
+});
+
+test("cache miss reports ambiguous live case-insensitive nicknames", async () => {
+  const { client, calls } = makeClient();
+  client.api.loadAppliances = async () => {
+    calls.loadAppliances += 1;
+    return [
+      applianceInfo(),
+      { ...applianceInfo(), macAddress: "bb", nickName: "living" }
+    ];
+  };
+
+  await assert.rejects(() => client.getAirConditionerByIdCached("LIVING"));
+
+  assert.equal(calls.loadAppliances, 1);
+});
+
 test("forceApplianceCacheRefresh bypasses existing cache", async () => {
   const { client, cacheFile, calls } = makeClient({ forceApplianceCacheRefresh: true });
   await fs.writeFile(cacheFile, JSON.stringify(cacheWithAc(), null, 2), "utf8");

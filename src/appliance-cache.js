@@ -1,5 +1,6 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { findApplianceIdentifierMatches } = require("./appliance-identity");
 
 const CACHE_VERSION = 1;
 
@@ -26,8 +27,13 @@ class ApplianceCache {
   }
 
   async find(id) {
+    const matches = await this.findAll(id);
+    return matches[0] || null;
+  }
+
+  async findAll(id) {
     const cache = await this.read();
-    return cache.appliances.find((record) => recordMatches(record, id)) || null;
+    return findApplianceIdentifierMatches(cache.appliances, id).map((match) => match.item);
   }
 
   async upsert(record) {
@@ -59,10 +65,7 @@ function emptyCache() {
  * @param {string} id
  */
 function recordMatches(record, id) {
-  if (!record || !id) {
-    return false;
-  }
-  return [record.macAddress, record.uniqueId, record.nickName].includes(id);
+  return findApplianceIdentifierMatches(record ? [record] : [], id).length > 0;
 }
 
 module.exports = { ApplianceCache, CACHE_VERSION, recordMatches };

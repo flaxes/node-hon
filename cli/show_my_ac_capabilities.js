@@ -1,8 +1,8 @@
 const fs = require("node:fs");
 const getClient = require("./_get-client");
 
-async function main() {
-  const client = await getClient();
+async function main(options = {}) {
+  const client = await getClient(options);
 
   try {
     const airConditioners = await client.getAirConditioners();
@@ -26,8 +26,11 @@ async function main() {
   }
 }
 
-main().catch((error) => {
+if (require.main === module) {
+  main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
-});
+  });
+}
 
+module.exports = { main };

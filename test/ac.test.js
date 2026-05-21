@@ -17,6 +17,7 @@ test("HonClient matches air conditioner by macAddress, uniqueId, then nickName",
   assert.equal((await client.getAirConditionerById("aa")).nickName, "Living");
   assert.equal((await client.getAirConditionerById(second.uniqueId)).nickName, "Bedroom");
   assert.equal((await client.getAirConditionerById("Living")).macAddress, "aa");
+  assert.equal((await client.getAirConditionerById("bedroom")).macAddress, "bb");
 });
 
 test("HonClient reports missing and ambiguous AC_ID with candidates", async () => {
