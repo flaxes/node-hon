@@ -1,5 +1,3 @@
-"use strict";
-
 const { HonCommandLoader } = require("./command");
 const { HonParameter, HonParameterRange, HonParameterEnum } = require("./parameters");
 

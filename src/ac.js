@@ -1,5 +1,3 @@
-"use strict";
-
 const fs = require("node:fs/promises");
 const { UnsupportedControlError } = require("./errors");
 const { cleanValue } = require("./parameters");

@@ -1,5 +1,3 @@
-"use strict";
-
 class HonAuthError extends Error {
   constructor(message, details) {
     super(message);

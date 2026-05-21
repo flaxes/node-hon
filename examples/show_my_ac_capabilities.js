@@ -1,5 +1,3 @@
-"use strict";
-
 const { HonClient } = require("../src");
 const { loadConfig } = require("../src/config");
 const fs = require('node:fs');

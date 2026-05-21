@@ -1,5 +1,3 @@
-"use strict";
-
 module.exports = {
   AUTH_API: "https://account2.hon-smarthome.com",
   API_URL: "https://api-iot.he.services",

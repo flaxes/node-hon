@@ -1,5 +1,3 @@
-"use strict";
-
 class CookieJar {
   constructor() {
     this.cookies = new Map();

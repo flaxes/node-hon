@@ -1,5 +1,3 @@
-"use strict";
-
 const path = require("node:path");
 
 function loadConfig(configPath = path.resolve(__dirname, "..", "config.js")) {

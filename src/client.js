@@ -1,5 +1,3 @@
-"use strict";
-
 const path = require("node:path");
 const { HonDevice } = require("./device");
 const { SessionStore } = require("./session-store");

@@ -1,5 +1,3 @@
-"use strict";
-
 class DebugLogger {
   constructor({ enabled = false, sink = console.log, now = () => new Date() } = {}) {
     this.enabled = Boolean(enabled);

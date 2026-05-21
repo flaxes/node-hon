@@ -1,5 +1,3 @@
-"use strict";
-
 const { HonClient, ApplianceNotFoundError } = require("../src");
 const { loadConfig } = require("../src/config");
 

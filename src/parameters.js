@@ -1,5 +1,3 @@
-"use strict";
-
 function strToFloat(value) {
   if (typeof value === "number") {
     return value;

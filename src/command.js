@@ -1,5 +1,3 @@
-"use strict";
-
 const { HonApiError } = require("./errors");
 const { HonParameterFixed, HonParameterProgram, createParameter } = require("./parameters");
 

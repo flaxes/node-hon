@@ -8,7 +8,7 @@ const {
   HonAuthError,
   HonApiError,
   UnsupportedControlError,
-  ApplianceNotFoundError
+  ApplianceNotFoundError,
 } = require("./errors");
 
 module.exports = {
@@ -19,5 +19,6 @@ module.exports = {
   HonAuthError,
   HonApiError,
   UnsupportedControlError,
-  ApplianceNotFoundError
+  ApplianceNotFoundError,
 };
+

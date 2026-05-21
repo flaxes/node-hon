@@ -1,5 +1,3 @@
-"use strict";
-
 const crypto = require("node:crypto");
 const { URLSearchParams } = require("node:url");
 const constants = require("./constants");

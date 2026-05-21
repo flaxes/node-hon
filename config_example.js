@@ -1,5 +1,3 @@
-"use strict";
-
 /** @type {import("./types/global").ProjectConfig} */
 module.exports = {
   email: "user@example.com",
