@@ -1,6 +1,6 @@
 {
   "name": "node-hon",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "CommonJS Node.js client for hOn auth and air conditioner controls",
   "main": "src/index.js",
   "bin": {
