@@ -1,5 +1,6 @@
 /config.js
 .hon-session.json
+.hon-appliance-cache.json
 .hon-devices.json
 hon-devices-capabilities.json
 test.js

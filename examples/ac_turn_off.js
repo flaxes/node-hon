@@ -17,7 +17,7 @@ async function main() {
         "Set AC_ID to one of the listed identifiers",
       );
     }
-    const ac = await client.getAirConditionerByIdFast(acId);
+    const ac = await client.getAirConditionerByIdCached(acId);
 
     if (!ac) {
       throw new ApplianceNotFoundError("Cannot create appliance. Check AC_ID");

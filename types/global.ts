@@ -3,6 +3,8 @@ export interface ProjectConfig {
   password: string;
   mobileId?: string;
   sessionFile: string;
+  applianceCacheFile?: string;
+  forceApplianceCacheRefresh?: boolean;
   debug?: boolean;
   requestLogging?: boolean;
 }

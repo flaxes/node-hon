@@ -16,7 +16,7 @@ async function main() {
     }
     const presetName = process.env.PRESET_NAME || "preset_fan";
     const presetFile = path.resolve(__dirname, "..", "presets", `${presetName}.json`);
-    const ac = await client.getAirConditionerById(acId);
+    const ac = await client.getAirConditionerByIdCached(acId);
     const preset = require(presetFile);
     await ac.applyPreset(preset, presetName);
     console.log(`Applied ${presetName} to ${ac.nickName} (${ac.macAddress})`);

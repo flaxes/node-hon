@@ -13,7 +13,7 @@ async function main() {
       await printAvailable(client);
       throw new ApplianceNotFoundError("Set AC_ID to one of the listed identifiers");
     }
-    const ac = await client.getAirConditionerById(acId);
+    const ac = await client.getAirConditionerByIdCached(acId);
     await ac.powerOn();
     console.log(`Turned on ${ac.nickName} (${ac.macAddress})`);
   } finally {

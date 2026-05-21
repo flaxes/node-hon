@@ -19,6 +19,7 @@ class HonAppliance {
     this.statistics = {};
     this.attributes = {};
     this.additionalData = {};
+    this.rawCommands = {};
     this.lastUpdate = null;
     this.defaultSetting = new HonParameter("", {}, "");
     this.connection = this.attributes?.lastConnEvent?.category !== "DISCONNECTED";
@@ -115,7 +116,39 @@ class HonAppliance {
     this.commands = loader.commands;
     this.additionalData = loader.additionalData;
     this.applianceModel = loader.applianceData;
+    this.rawCommands = loader.rawCommands;
     this.syncParamsToCommand("settings");
+  }
+
+  loadCommandsFromCache(cacheData) {
+    const loader = new HonCommandLoader(this.api, this);
+    loader.loadFromCache(cacheData);
+    this.commands = loader.commands;
+    this.additionalData = loader.additionalData;
+    this.applianceModel = loader.applianceData;
+    this.rawCommands = loader.rawCommands;
+  }
+
+  toCacheRecord() {
+    return {
+      cachedAt: new Date().toISOString(),
+      info: this.info,
+      zone: this.zone,
+      macAddress: this.macAddress,
+      uniqueId: this.uniqueId,
+      nickName: this.nickName,
+      commandData: {
+        commands: this.rawCommands || {},
+        applianceModel: this.applianceModel,
+        additionalData: this.additionalData
+      }
+    };
+  }
+
+  static fromCacheRecord(api, record) {
+    const appliance = new HonAppliance(api, record.info, record.zone || 0);
+    appliance.loadCommandsFromCache(record.commandData || {});
+    return appliance;
   }
 
   async loadAttributes() {

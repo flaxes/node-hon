@@ -170,6 +170,7 @@ class HonCommandLoader {
     this.commands = {};
     this.applianceData = {};
     this.additionalData = {};
+    this.rawCommands = {};
   }
 
   async loadCommands() {
@@ -179,6 +180,7 @@ class HonCommandLoader {
       this.api.loadCommandHistory(this.appliance)
     ]);
     this.apiCommands = { ...(commands || {}) };
+    this.rawCommands = { ...(commands || {}) };
     this.favourites = favourites || [];
     this.commandHistory = history || [];
     this.applianceData = this.apiCommands.applianceModel || {};
@@ -186,6 +188,16 @@ class HonCommandLoader {
     this.getCommands();
     this.addFavourites();
     this.recoverLastCommandStates();
+  }
+
+  loadFromCache(cacheData) {
+    this.apiCommands = { ...(cacheData.commands || {}) };
+    this.rawCommands = { ...(cacheData.commands || {}) };
+    this.favourites = [];
+    this.commandHistory = [];
+    this.applianceData = cacheData.applianceModel || {};
+    this.additionalData = cacheData.additionalData || {};
+    this.getCommands();
   }
 
   getCommands() {

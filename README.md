@@ -21,6 +21,8 @@ Use `show_my_ac_devices.js` to find identifiers for manual tests. Use the AC `ma
 
 `ac_apply_preset.js` reads `PRESET_NAME`, defaulting to `preset_fan`, and loads presets from `presets/`. Use `show_my_ac_capabilities.js` to inspect real command keys and values when a preset needs another alias.
 
+Preset runs use a local appliance command cache at `.hon-appliance-cache.json` by default. Delete that file, or set `forceApplianceCacheRefresh: true` in `config.js`, when the appliance command model changes or a preset cannot find a parameter that exists in the app.
+
 Example:
 
 ```js

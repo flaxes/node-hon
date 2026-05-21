@@ -9,6 +9,7 @@ const { HonAppliance, isAirConditioner } = require("./appliance");
 const { HonAirConditioner } = require("./ac");
 const { ApplianceNotFoundError } = require("./errors");
 const { DebugLogger } = require("./logger");
+const { ApplianceCache } = require("./appliance-cache");
 
 class HonClient {
   constructor(config = {}) {
@@ -23,6 +24,8 @@ class HonClient {
 
     /** @type {SessionStore | null} */
     this.sessionStore = sessionFile ? new SessionStore(sessionFile) : null;
+    this.applianceCache = new ApplianceCache(config.applianceCacheFile || "./.hon-appliance-cache.json");
+    this.forceApplianceCacheRefresh = Boolean(config.forceApplianceCacheRefresh);
     this.auth = new HonAuth({
       email: config.email,
       password: config.password,
@@ -77,10 +80,40 @@ class HonClient {
     const appliances = await this.api.loadAppliances();
     for (const applianceData of appliances) {
       const appliance = new HonAppliance(this.api, applianceData);
-      if (appliance.uniqueId === id) {
+      if ([appliance.macAddress, appliance.uniqueId, appliance.nickName].includes(id)) {
         return this.#createApplianceSetup(appliance);
       }
     }
+  }
+
+  async getAirConditionerByIdCached(id) {
+    if (!id) {
+      throw new ApplianceNotFoundError("AC_ID is required", { available: [] });
+    }
+    if (!this.forceApplianceCacheRefresh) {
+      const operation = this.logger.start(`Loading AC from cache: "${id}"...`);
+      try {
+        const record = await this.applianceCache.find(id);
+        if (record) {
+          const appliance = HonAppliance.fromCacheRecord(this.api, record);
+          operation.success(`Loaded AC from cache: "${id}"`);
+          return new HonAirConditioner(appliance, this.logger);
+        }
+        operation.failure(`AC cache miss: "${id}"`);
+      } catch (error) {
+        operation.failure(`AC cache failed: "${id}"`);
+      }
+    }
+
+    const refresh = this.logger.start(`Refreshing AC cache: "${id}"...`);
+    const appliance = await this.setupOne(id);
+    if (!appliance) {
+      refresh.failure(`AC cache refresh failed: "${id}"`);
+      throw new ApplianceNotFoundError(`No air conditioner found for AC_ID: ${id}`, { id, available: [] });
+    }
+    await this.applianceCache.upsert(appliance.toCacheRecord());
+    refresh.success(`AC cache refreshed: "${id}"`);
+    return new HonAirConditioner(appliance, this.logger);
   }
 
   async setup() {
@@ -199,4 +232,3 @@ class HonClient {
 }
 
 module.exports = { HonClient };
-
