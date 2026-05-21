@@ -7,7 +7,7 @@
 The main manual flow is applying an AC preset:
 
 ```powershell
-$env:AC_ID="<mac-address>"; node examples/ac_apply_preset.js
+$env:AC_ID="<mac-address>"; node cli/ac_apply_preset.js
 ```
 
 `PRESET_NAME` is optional and defaults to `preset_fan`.
@@ -38,7 +38,7 @@ These files are intended to be committed:
 - `package.json`
 - `config_example.js`
 - `src/**/*.js`
-- `examples/*.js`
+- `cli/*.js`
 - `presets/*.json`
 - `test/*.test.js`
 - `types/*.ts`
@@ -107,8 +107,8 @@ Logs must not include passwords, tokens, session contents, or full secret-bearin
 ## Useful Commands
 
 ```powershell
-node examples/show_my_ac_devices.js
-node examples/show_my_ac_capabilities.js
-$env:AC_ID="<mac-address>"; node examples/ac_apply_preset.js
-$env:AC_ID="<mac-address>"; $env:PRESET_NAME="preset_fan"; node examples/ac_apply_preset.js
+node cli/show_my_ac_devices.js
+node cli/show_my_ac_capabilities.js
+$env:AC_ID="<mac-address>"; node cli/ac_apply_preset.js
+$env:AC_ID="<mac-address>"; $env:PRESET_NAME="preset_fan"; node cli/ac_apply_preset.js
 ```

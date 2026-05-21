@@ -1,19 +1,17 @@
-const { HonClient } = require("../src");
-const { loadConfig } = require("../src/config");
-const fs = require('node:fs');
+const fs = require("node:fs");
+const getClient = require("./_get-client");
 
 async function main() {
-  const config = loadConfig();
-  const client = new HonClient(config);
+  const client = await getClient();
+
   try {
-    await client.create();
     const airConditioners = await client.getAirConditioners();
     if (!airConditioners.length) {
       console.log("No air conditioners found.");
       return;
     }
 
-    const filename = './hon-devices-capabilities.json';
+    const filename = "./hon-devices-capabilities.json";
     const mapping = {};
     for (const ac of airConditioners) {
       const naming = `${ac.nickName}_${ac.macAddress}`;
@@ -32,3 +30,4 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+

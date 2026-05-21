@@ -1,0 +1,6 @@
+{
+  "mode": "iot_uv_and_dry",
+  "tempSel": "24",
+  "windSpeed": "2",
+  "windDirectionVertical": "5"
+}

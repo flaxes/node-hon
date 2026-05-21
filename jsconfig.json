@@ -17,7 +17,7 @@
     },
     "include": [
         "src/**/*",
-        "examples/**/*",
+        "cli/**/*",
         "types/**/*",
         "test/**/*",
         "config.js",

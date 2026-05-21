@@ -18,16 +18,25 @@ All credit for the original implementation goes to Andre0512. This version reimp
 
 ```bash
 cp config_example.js config.js
-node examples/show_my_ac_devices.js
+node cli/show_my_ac_devices.js
 ```
 
 ## Usage
 
-Use `show_my_ac_devices.js` to find identifiers for manual tests. Use the AC `macAddress` as `AC_ID` when possible. If `AC_ID` is omitted, the turn on/off examples print available air conditioners with `macAddress`, `uniqueId`, and `nickName`.
+Use `show_my_ac_devices.js` to find identifiers for manual tests. Use the AC `macAddress` as `AC_ID` when possible. If `AC_ID` is omitted, the preset apply CLI prints available air conditioners with `macAddress`, `uniqueId`, and `nickName`.
 
 `ac_apply_preset.js` reads `PRESET_NAME`, defaulting to `preset_fan`, and loads presets from `presets/`. Use `show_my_ac_capabilities.js` to inspect real command keys and values when a preset needs another alias.
 
 Preset runs use a local appliance command cache at `.hon-appliance-cache.json` by default. Delete that file, or set `forceApplianceCacheRefresh: true` in `config.js`, when the appliance command model changes or a preset cannot find a parameter that exists in the app.
+
+Generate a preset from exported capabilities:
+
+```bash
+node cli/show_my_ac_capabilities.js
+node cli/ac_generate_preset.js
+```
+
+`ac_generate_preset.js` reads `hon-devices-capabilities.json` by default. You can set `CAPABILITIES_FILE`, `AC_ID`, or `PRESET_NAME` to preselect the input file, air conditioner, or output preset name.
 
 Example:
 
@@ -35,7 +44,7 @@ Example:
 process.env.AC_ID = "xx-xx-xx-xx-xx-xx";
 process.env.PRESET_NAME = "preset_cool";
 
-require("./examples/ac_apply_preset");
+require("./cli/ac_apply_preset");
 ```
 
 ## Tests
@@ -48,3 +57,4 @@ npm test
 
 This project is released under the MIT License.  
 The original Python library is also MIT-licensed. See the `LICENSE` file for details and attribution.
+
