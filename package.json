@@ -1,8 +1,12 @@
 {
-  "name": "node-hon",
-  "version": "1.0.0",
+  "name": "flaks-node-hon",
+  "version": "1.0.1",
   "description": "CommonJS Node.js client for hOn auth and air conditioner controls",
   "main": "src/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flaxes/node-hon"
+  },
   "bin": {
     "node-hon": "bin/node-hon.js"
   },
@@ -39,3 +43,4 @@
     "typescript": "^6.0.3"
   }
 }
+
