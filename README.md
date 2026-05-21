@@ -1,12 +1,18 @@
-# hOn NodeJS AC controls
+# hOn Node.js AC Controls
 
-CommonJS Node.js module for hOn authentication and air conditioner controls.
+A CommonJS Node.js module for hOn authentication and air conditioner controls.
+
+## Advantages
+
+- Speed: cached AC preset runs take about 1 second.
+- CLI: easy to set up and use.
+- Module: easy to reuse in other projects.
 
 ## About This Project
 
-This project is a **NodeJS port** of the [Andre0512/pyhOn](https://github.com/Andre0512/pyhOn), which was originally developed by Andre0512 under the MIT License.
+This project is a **Node.js port** of [Andre0512/pyhOn](https://github.com/Andre0512/pyhOn), which was originally developed by Andre0512 under the MIT License.
 
-All credit for the original implementation goes to the Andre0512. This version reimplements the library in NodeJS and may have differences in API and functionality to suit the JavaScript ecosystem.
+All credit for the original implementation goes to Andre0512. This version reimplements the library in Node.js and may differ in API and functionality to better suit the JavaScript ecosystem.
 
 ## Setup
 
