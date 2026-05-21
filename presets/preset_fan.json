@@ -1,0 +1,8 @@
+{
+  "mode": "iot_uv_and_fan",
+  "tempSel": "24",
+  "windSpeed": "2",
+  "windDirectionVertical": "2",
+  "windDirectionHorizontal": "0",
+  "healthMode": "1"
+}
