@@ -6,6 +6,16 @@
   "bin": {
     "node-hon": "bin/node-hon.js"
   },
+  "files": [
+    "bin/",
+    "cli/",
+    "src/",
+    "presets/",
+    "types/",
+    "config_example.js",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "commonjs",
   "author": "Flaks",
   "engines": {
@@ -13,7 +23,8 @@
   },
   "scripts": {
     "test": "node --test \"test/*.test.js\"",
-    "typecheck": "tsc --noEmit --project jsconfig.json"
+    "typecheck": "tsc --noEmit --project jsconfig.json",
+    "prepublishOnly": "npm test && npm run typecheck"
   },
   "keywords": [
     "hon",

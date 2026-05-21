@@ -1,5 +1,5 @@
 const fs = require("node:fs");
-const getClient = require("./_get-client");
+const getClient = require("../src/lib-cli/_get-client");
 
 async function main(options = {}) {
   const client = await getClient(options);

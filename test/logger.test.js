@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { DebugLogger, formatTimestamp, formatElapsed } = require("../src/logger");
+const { DebugLogger, formatTimestamp, formatElapsed } = require("../src/lib/logger");
 
 test("DebugLogger formats timestamps and elapsed seconds", () => {
   assert.equal(formatTimestamp(new Date("2026-01-30T15:30:10")), "2026-01-30 15:30:10");

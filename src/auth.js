@@ -1,9 +1,9 @@
 const crypto = require("node:crypto");
 const { URLSearchParams } = require("node:url");
 const constants = require("./constants");
-const { CookieJar } = require("./cookie-jar");
+const { CookieJar } = require("./lib/cookie-jar");
 const { HonAuthError } = require("./errors");
-const { isExpired } = require("./session-store");
+const { isExpired } = require("./caching/session-store");
 
 const TOKEN_EXPIRES_AFTER_MS = 8 * 60 * 60 * 1000;
 const TOKEN_EXPIRE_WARNING_MS = 60 * 60 * 1000;

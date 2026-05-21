@@ -6,7 +6,7 @@ const { HonClient } = require("../src/client");
 const { HonCommand } = require("../src/command");
 const { HonAppliance } = require("../src/appliance");
 const { ApplianceNotFoundError, UnsupportedControlError } = require("../src/errors");
-const { DebugLogger } = require("../src/logger");
+const { DebugLogger } = require("../src/lib/logger");
 
 test("HonClient matches air conditioner by macAddress, uniqueId, then nickName", async () => {
   const first = fakeAc("aa", "Living");

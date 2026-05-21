@@ -1,9 +1,10 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const readline = require("node:readline/promises");
-const { stdin: input, stdout: output } = require("node:process");
-const { ApplianceNotFoundError } = require("../src");
-const getClient = require("./_get-client");
+const getClient = require("../src/lib-cli/_get-client");
+const { createAsk, promptChoice } = require("../src/lib-cli/_prompt");
+const { formatAc, printSkipped } = require("../src/lib-cli/_format");
+const { handleCliError } = require("../src/lib-cli/_run");
+const { selectAirConditioner } = require("../src/lib-cli/_select-ac");
 const {
   buildPreset,
   defaultValueForField,
@@ -15,76 +16,43 @@ const {
 async function main(options = {}) {
   const baseDir = options.baseDir || path.resolve(__dirname, "..");
   const client = await getClient({ ...options, baseDir });
-  const rl = readline.createInterface({ input, output });
+  const ask = options.ask || createAsk();
   try {
     const airConditioners = await client.getAirConditioners();
     if (!airConditioners.length) {
       console.log("No air conditioners found.");
       return;
     }
-    const selectedAc = await promptAc(rl, airConditioners, options.acId);
+    const selectedAc = await selectAirConditioner(ask, airConditioners, options.acId);
     const selectedCommand = selectPresetCommand(selectedAc.capabilities());
-    const generatorMode = await promptChoice(rl, "Generator mode", ["basic", "advanced"], "basic");
+    const generatorMode = await promptChoice(ask, "Generator mode", ["basic", "advanced"], "basic");
     const modeOptions = getModeOptions(selectedCommand.command);
-    const presetMode = modeOptions.length ? await promptChoice(rl, "Preset mode", modeOptions, modeOptions[0]) : "";
+    const presetMode = modeOptions.length ? await promptChoice(ask, "Preset mode", modeOptions, modeOptions[0]) : "";
     const { fields, skipped } = getFieldDescriptors(selectedCommand.command, generatorMode);
     const values = {};
     for (const field of fields) {
-      values[field.name] = await promptField(rl, field);
+      values[field.name] = await promptField(ask, field);
     }
     const preset = buildPreset(selectedCommand.command, values, presetMode);
-    const presetName = await promptPresetName(rl, options.presetName);
+    const presetName = await promptPresetName(ask, options.presetName);
     const outputFile = path.resolve(baseDir, "presets", `${presetName}.json`);
     await fs.mkdir(path.dirname(outputFile), { recursive: true });
     await fs.writeFile(outputFile, `${JSON.stringify(preset, null, 2)}\n`);
-    console.log(`Generated ${path.relative(process.cwd(), outputFile)} for ${selectedAc.nickName} (${selectedAc.macAddress})`);
+    console.log(`Generated ${path.relative(process.cwd(), outputFile)} for ${formatAc(selectedAc)}`);
     console.log(`Selected command: ${selectedCommand.name}${presetMode ? ` (${presetMode})` : ""}`);
     printSkipped(skipped);
   } finally {
-    rl.close();
+    if (ask.close) {
+      ask.close();
+    }
     await client.close();
   }
 }
 
-async function promptAc(rl, airConditioners, acId = "") {
-  const selectedId = acId || process.env.AC_ID;
-  if (selectedId) {
-    const matches = airConditioners.filter((ac) => {
-      return (
-        ac.macAddress === selectedId ||
-        ac.uniqueId === selectedId ||
-        ac.nickName === selectedId ||
-        ac.nickName.toLowerCase() === selectedId.toLowerCase()
-      );
-    });
-    if (matches.length === 1) {
-      return matches[0];
-    }
-    if (matches.length > 1) {
-      throw new ApplianceNotFoundError(`AC_ID matches multiple air conditioners: ${selectedId}`, {
-        id: selectedId,
-        matches: matches.map((ac) => ac.identifiers)
-      });
-    }
-    throw new ApplianceNotFoundError(`No air conditioner found for AC_ID: ${selectedId}`, {
-      id: selectedId,
-      available: airConditioners.map((ac) => ac.identifiers)
-    });
-  }
-  if (airConditioners.length === 1) {
-    const ac = airConditioners[0];
-    console.log(`Selected AC: ${ac.nickName} (${ac.macAddress})`);
-    return ac;
-  }
-  const choices = airConditioners.map((ac) => `${ac.nickName} (${ac.macAddress})`);
-  const selected = await promptChoice(rl, "Air conditioner", choices, choices[0]);
-  return airConditioners[choices.indexOf(selected)];
-}
-
-async function promptPresetName(rl, presetName = "") {
+async function promptPresetName(ask, presetName = "") {
   const fallback = presetName || process.env.PRESET_NAME || "preset_custom";
   for (;;) {
-    const answer = (await rl.question(`Preset filename [${fallback}]: `)).trim() || fallback;
+    const answer = (await ask.question(`Preset filename [${fallback}]: `)).trim() || fallback;
     const safe = answer.replace(/\.json$/i, "");
     if (/^[a-zA-Z0-9_.-]+$/.test(safe)) {
       return safe;
@@ -93,32 +61,11 @@ async function promptPresetName(rl, presetName = "") {
   }
 }
 
-async function promptChoice(rl, label, choices, fallback) {
-  for (;;) {
-    console.log(`${label}:`);
-    choices.forEach((choice, index) => {
-      console.log(`  ${index + 1}. ${choice}`);
-    });
-    const answer = (await rl.question(`${label} [${fallback}]: `)).trim();
-    if (!answer) {
-      return fallback;
-    }
-    const index = Number(answer);
-    if (Number.isInteger(index) && index >= 1 && index <= choices.length) {
-      return choices[index - 1];
-    }
-    if (choices.includes(answer)) {
-      return answer;
-    }
-    console.log(`Choose a number from 1 to ${choices.length}, or enter an exact value.`);
-  }
-}
-
-async function promptField(rl, field) {
+async function promptField(ask, field) {
   const fallback = defaultValueForField(field);
   for (;;) {
     const suffix = field.values.length ? ` (${field.values.join(", ")})` : "";
-    const answer = (await rl.question(`${field.name}${suffix} [${fallback}]: `)).trim() || fallback;
+    const answer = (await ask.question(`${field.name}${suffix} [${fallback}]: `)).trim() || fallback;
     if (field.values.includes(String(answer))) {
       return String(answer);
     }
@@ -126,21 +73,8 @@ async function promptField(rl, field) {
   }
 }
 
-function printSkipped(skipped) {
-  if (!skipped.length) {
-    return;
-  }
-  console.log("Skipped fields:");
-  for (const item of skipped) {
-    console.log(`- ${item.name}: ${item.reason}`);
-  }
-}
-
 if (require.main === module) {
-  main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-  });
+  main().catch(handleCliError);
 }
 
 module.exports = { main };

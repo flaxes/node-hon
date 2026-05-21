@@ -1,6 +1,7 @@
 const path = require("node:path");
-const { ApplianceNotFoundError } = require("../src");
-const getAcClient = require("./_get-ac-client");
+const getAcClient = require("../src/lib-cli/_get-ac-client");
+const { formatAc } = require("../src/lib-cli/_format");
+const { handleCliError } = require("../src/lib-cli/_run");
 
 async function main(options = {}) {
   const baseDir = options.baseDir || path.resolve(__dirname, "..");
@@ -11,7 +12,7 @@ async function main(options = {}) {
     const presetName = options.presetName || process.env.PRESET_NAME || "preset_fan";
     if (presetName === "off") {
       await ac.powerOff();
-      console.log(`Powered off ${ac.nickName} (${ac.macAddress})`);
+      console.log(`Powered off ${formatAc(ac)}`);
       return;
     }
     const presetFile = path.resolve(
@@ -22,28 +23,14 @@ async function main(options = {}) {
 
     const preset = require(presetFile);
     await ac.applyPreset(preset, presetName);
-    console.log(`Applied ${presetName} to ${ac.nickName} (${ac.macAddress})`);
+    console.log(`Applied ${presetName} to ${formatAc(ac)}`);
   } finally {
     await client.close();
   }
 }
 
-function handleError(error) {
-  if (error instanceof ApplianceNotFoundError && error.details?.available) {
-    console.error(error.message);
-    for (const ac of error.details.available) {
-      console.error(
-        `- macAddress=${ac.macAddress} uniqueId=${ac.uniqueId} nickName=${ac.nickName}`,
-      );
-    }
-  } else {
-    console.error(error);
-  }
-  process.exitCode = 1;
-}
-
 if (require.main === module) {
-  main().catch(handleError);
+  main().catch(handleCliError);
 }
 
-module.exports = { main, handleError };
+module.exports = { main };

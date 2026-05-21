@@ -58,16 +58,46 @@ test("node-hon routes list command", async () => {
   assert.deepEqual(calls, [{ command: "list", options: { baseDir: "/pkg" } }]);
 });
 
+test("node-hon routes config command", async () => {
+  const calls = [];
+  const code = await run(["config"], {
+    baseDir: "/pkg",
+    stderr: silentStderr(),
+    commands: fakeCommands(calls)
+  });
+
+  assert.equal(code, 0);
+  assert.deepEqual(calls, [{ command: "config", options: { baseDir: "/pkg" } }]);
+});
+
+test("node-hon routes purge-cache command", async () => {
+  const calls = [];
+  const code = await run(["purge-cache"], {
+    baseDir: "/pkg",
+    stderr: silentStderr(),
+    commands: fakeCommands(calls)
+  });
+
+  assert.equal(code, 0);
+  assert.deepEqual(calls, [{ command: "purgeCache", options: { baseDir: "/pkg" } }]);
+});
+
 function fakeCommands(calls = []) {
   return {
     apply: async (options) => {
       calls.push({ command: "apply", options });
+    },
+    config: async (options) => {
+      calls.push({ command: "config", options });
     },
     list: async (options) => {
       calls.push({ command: "list", options });
     },
     generatePreset: async (options) => {
       calls.push({ command: "generatePreset", options });
+    },
+    purgeCache: async (options) => {
+      calls.push({ command: "purgeCache", options });
     }
   };
 }

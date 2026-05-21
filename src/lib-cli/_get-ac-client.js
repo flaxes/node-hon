@@ -1,4 +1,4 @@
-const { ApplianceNotFoundError } = require("../src");
+const { ApplianceNotFoundError } = require("..");
 const getClient = require("./_get-client");
 
 async function getAcClient(options = {}) {

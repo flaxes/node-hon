@@ -1,9 +1,9 @@
-const { HonClient } = require("../src");
-const { loadConfig } = require("../src/config");
+const { HonClient } = require("..");
+const { loadConfig } = require("../lib/config");
 const path = require("node:path");
 
 async function getClient(options = {}) {
-  const baseDir = options.baseDir || path.resolve(__dirname, "..");
+  const baseDir = options.baseDir || path.resolve(__dirname, "..", "..");
   const configPath = options.configPath || path.resolve(baseDir, "config.js");
   const config = loadConfig(configPath);
   if (config.sessionFile && !path.isAbsolute(config.sessionFile)) {
@@ -13,7 +13,7 @@ async function getClient(options = {}) {
     config.applianceCacheFile = path.resolve(baseDir, config.applianceCacheFile);
   }
   if (!config.applianceCacheFile) {
-    config.applianceCacheFile = path.resolve(baseDir, ".hon-appliance-cache.json");
+    config.applianceCacheFile = path.resolve(baseDir, "cache", ".hon-appliance-cache.json");
   }
   const client = new HonClient(config);
 

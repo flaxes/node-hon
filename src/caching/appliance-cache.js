@@ -1,6 +1,6 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { findApplianceIdentifierMatches } = require("./appliance-identity");
+const { findApplianceIdentifierMatches } = require("../appliance-identity");
 
 const CACHE_VERSION = 1;
 

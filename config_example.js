@@ -3,8 +3,8 @@ module.exports = {
   email: "user@example.com",
   password: "password",
   mobileId: "pyhOn-node",
-  sessionFile: "./.hon-session.json",
-  applianceCacheFile: "./.hon-appliance-cache.json",
+  sessionFile: "./cache/.hon-session.json",
+  applianceCacheFile: "./cache/.hon-appliance-cache.json",
   forceApplianceCacheRefresh: false,
   debug: false
 };

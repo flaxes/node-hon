@@ -1,13 +1,13 @@
 const path = require("node:path");
 const { HonDevice } = require("./device");
-const { SessionStore } = require("./session-store");
+const { SessionStore } = require("./caching/session-store");
 const { HonAuth } = require("./auth");
 const { HonAPI } = require("./api");
 const { HonAppliance, isAirConditioner } = require("./appliance");
 const { HonAirConditioner } = require("./ac");
 const { ApplianceNotFoundError } = require("./errors");
-const { DebugLogger } = require("./logger");
-const { ApplianceCache } = require("./appliance-cache");
+const { DebugLogger } = require("./lib/logger");
+const { ApplianceCache } = require("./caching/appliance-cache");
 const { findApplianceIdentifierMatches } = require("./appliance-identity");
 
 class HonClient {
@@ -26,7 +26,7 @@ class HonClient {
 
     /** @type {SessionStore | null} */
     this.sessionStore = sessionFile ? new SessionStore(sessionFile) : null;
-    this.applianceCache = new ApplianceCache(config.applianceCacheFile || "./.hon-appliance-cache.json");
+    this.applianceCache = new ApplianceCache(config.applianceCacheFile || "./cache/.hon-appliance-cache.json");
     this.forceApplianceCacheRefresh = Boolean(config.forceApplianceCacheRefresh);
     this.auth = new HonAuth({
       email: config.email,

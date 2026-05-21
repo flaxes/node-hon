@@ -17,8 +17,7 @@ node-hon apply <mac-or-name> preset_fan
 These files are intentionally local runtime files and must stay untracked:
 
 - `/config.js` - real hOn credentials and local config
-- `/.hon-session.json` - auth/session tokens
-- `/.hon-appliance-cache.json` - local AC command cache
+- `/cache/` - auth/session tokens and local command cache
 - `/.hon-devices.json` - local device identifiers
 - `/hon-devices-capabilities.json` - local device capabilities and identifiers
 - `/test.js` - local manual test script
@@ -63,11 +62,12 @@ Preset execution should use:
 HonClient.getAirConditionerByIdCached(id);
 ```
 
-This hydrates AC command data from `/.hon-appliance-cache.json` when possible and avoids slow setup calls.
+This hydrates AC command data from `/cache/.hon-appliance-cache.json` when possible and avoids slow setup calls.
 
 To refresh cached command data:
 
-- delete `/.hon-appliance-cache.json`, or
+- run `node-hon purge-cache`,
+- delete `/cache/.hon-appliance-cache.json`, or
 - set `forceApplianceCacheRefresh: true` in `config.js`
 
 Discovery and preset generation use live API data.
@@ -116,4 +116,5 @@ node-hon apply Bedroom preset_fan
 node-hon apply bedroom off
 node-hon list
 node-hon generate-preset
+node-hon purge-cache
 ```

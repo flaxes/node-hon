@@ -14,54 +14,128 @@ This project is a **Node.js port** of [Andre0512/pyhOn](https://github.com/Andre
 
 All credit for the original implementation goes to Andre0512. This version reimplements the library in Node.js and may differ in API and functionality to better suit the JavaScript ecosystem.
 
-## Setup
+## Install From NPM
+
+After this package is published, install it globally:
+
+```bash
+npm install -g node-hon
+```
+
+Then create a working config in the installed package folder or run from a checkout that has `config.js`, presets, and cache files available.
+
+## Global CLI Setup From This Repo
+
+1. Clone or download this repository.
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Create your local config:
 
 ```bash
 cp config_example.js config.js
-node cli/show_my_ac_devices.js
 ```
 
-## Usage
+4. Edit `config.js` and set your hOn account values.
 
-Use `show_my_ac_devices.js` to find identifiers for manual tests. Use the AC `macAddress` as `AC_ID` when possible. If `AC_ID` is omitted, the preset apply CLI prints available air conditioners with `macAddress`, `uniqueId`, and `nickName`.
+5. Install this checkout as a global npm command:
 
-`ac_apply_preset.js` reads `PRESET_NAME`, defaulting to `preset_fan`, and loads presets from `presets/`.
+```bash
+npm install -g .
+```
 
-Preset runs use a local appliance command cache at `.hon-appliance-cache.json` by default. Delete that file, or set `forceApplianceCacheRefresh: true` in `config.js`, when the appliance command model changes or a preset cannot find a parameter that exists in the app.
+6. Confirm the CLI is available:
 
-When installed globally, use the `node-hon` command:
+```bash
+node-hon list
+```
+
+## CLI Usage
+
+List available air conditioners:
+
+```bash
+node-hon list
+```
+
+Apply a preset by MAC address:
 
 ```bash
 node-hon apply xx-xx-xx-xx-xx-xx preset_fan
+```
+
+Apply a preset by AC name:
+
+```bash
 node-hon apply Bedroom preset_fan
+```
+
+Turn an AC off:
+
+```bash
 node-hon apply bedroom off
-node-hon list
+```
+
+Generate a preset interactively from live hOn capabilities:
+
+```bash
 node-hon generate-preset
 ```
 
-The AC identifier can be a MAC address, unique ID, or nickname. Nickname lookup is case-insensitive.
-
-Generate a preset from live hOn capabilities:
+Purge cached session and appliance command data:
 
 ```bash
+node-hon purge-cache
+```
+
+The AC identifier can be a MAC address, unique ID, or nickname. Nickname lookup is case-insensitive, so `Bedroom` and `bedroom` can both match the same AC.
+
+Generated and bundled presets live in `presets/`. Preset names are passed without `.json`, for example `preset_fan` loads `presets/preset_fan.json`.
+
+Runtime cache files live under `cache/` by default, including session and appliance command cache data. Run `node-hon purge-cache`, or set `forceApplianceCacheRefresh: true` in `config.js`, when the appliance command model changes or a preset cannot find a parameter that exists in the app.
+
+## Development CLI
+
+You can also run the CLI scripts directly from the repository:
+
+```bash
+node cli/show_my_ac_devices.js
 node cli/ac_generate_preset.js
 ```
 
 `ac_generate_preset.js` loads the latest AC capabilities from the hOn API. You can set `AC_ID` or `PRESET_NAME` to preselect the air conditioner or output preset name.
 
-Example:
-
-```js
-process.env.AC_ID = "xx-xx-xx-xx-xx-xx";
-process.env.PRESET_NAME = "preset_cool";
-
-require("./cli/ac_apply_preset");
-```
-
 ## Tests
 
 ```bash
 npm test
+```
+
+## Publishing
+
+Before publishing, make sure you are logged in:
+
+```bash
+npm login
+npm whoami
+```
+
+Verify the package:
+
+```bash
+npm test
+npm run typecheck
+npm pack --dry-run
+```
+
+Publish:
+
+```bash
+npm publish --access public
 ```
 
 ### License

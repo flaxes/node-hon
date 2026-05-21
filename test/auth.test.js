@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { HonAuth } = require("../src/auth");
 const { HonDevice } = require("../src/device");
-const { DebugLogger } = require("../src/logger");
+const { DebugLogger } = require("../src/lib/logger");
 
 test("HonAuth reuses valid session file data", async () => {
   let writes = 0;

@@ -1,12 +1,12 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { validateConfig } = require("../src/config");
+const { validateConfig } = require("../src/lib/config");
 
 test("validateConfig accepts required project config fields", () => {
   assert.equal(validateConfig({
     email: "user@example.com",
     password: "secret",
-    sessionFile: "./node/.hon-session.json"
+    sessionFile: "./cache/.hon-session.json"
   }), true);
 });
 

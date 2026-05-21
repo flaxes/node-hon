@@ -4,7 +4,7 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 const { HonClient } = require("../src/client");
-const { DebugLogger } = require("../src/logger");
+const { DebugLogger } = require("../src/lib/logger");
 
 test("cache miss falls back to live setup and writes cache", async () => {
   const { client, cacheFile, calls } = makeClient();

@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
-const { SessionStore, isExpired } = require("../src/session-store");
+const { SessionStore, isExpired } = require("../src/caching/session-store");
 
 test("SessionStore reads missing files as null and writes JSON atomically", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "hon-session-"));
