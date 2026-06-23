@@ -1,6 +1,6 @@
 {
   "name": "flaks-node-hon",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "CommonJS Node.js client for hOn auth and air conditioner controls",
   "main": "src/index.js",
   "repository": {
