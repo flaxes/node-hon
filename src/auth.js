@@ -168,6 +168,7 @@ class HonAuth {
       await this.logAuthError(response);
     }
     const authorizeData = await response.json();
+    // @ts-ignore
     const sessionId = authorizeData?.session_id || "";
     if (!sessionId) {
       throw new HonAuthError("Unable to get session_id", authorizeData);
@@ -184,6 +185,7 @@ class HonAuth {
       await this.logAuthError(tokenResponse);
     }
     const tokenData = await tokenResponse.json();
+    // @ts-ignore
     const tokens = tokenData?.tokens || {};
     this.auth.sessionToken = tokens.cognito_token || tokens.cognitoToken || "";
     this.auth.cognitoToken = this.auth.sessionToken;
