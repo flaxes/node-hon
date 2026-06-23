@@ -103,25 +103,14 @@ class HonAuth {
   }
 
   async authenticate() {
-    this.clear(false);
     if (!this.email) {
       throw new HonAuthError("An email address must be specified");
     }
     if (!this.password) {
       throw new HonAuthError("A password must be specified");
     }
-    try {
-      const loginUrl = await this.loadLogin();
-      const tokenUrl = await this.login(loginUrl);
-      await this.getToken(tokenUrl);
-      await this.apiAuth();
-      await this.saveSession();
-    } catch (error) {
-      if (error instanceof NoLoginNeeded) {
-        return;
-      }
-      throw error;
-    }
+    await this.authorize();
+    await this.saveSession();
   }
 
   async refresh(refreshToken = "") {
@@ -133,28 +122,78 @@ class HonAuth {
       operation?.success("Refresh skipped");
       return false;
     }
-    const params = new URLSearchParams({
-      client_id: constants.CLIENT_ID,
-      refresh_token: this.auth.refreshToken,
-      grant_type: "refresh_token"
-    });
-    const response = await this.request(`${constants.AUTH_API}/services/oauth2/token?${params}`, {
-      method: "POST"
-    });
-    if (response.status >= 400) {
+    try {
+      const params = new URLSearchParams({
+        client_id: constants.CLIENT_ID,
+        refresh_token: this.auth.refreshToken,
+        grant_type: "refresh_token"
+      });
+      const response = await this.request(`${constants.AUTH_API}/services/oauth2/token?${params}`, {
+        method: "POST"
+      });
+      if (response.status < 400) {
+        const data = /** @type {{ id_token?: string, access_token?: string }} */ (await response.json());
+        this.auth.idToken = data.id_token || "";
+        this.auth.accessToken = data.access_token || "";
+        this.auth.expiresAt = new Date(Date.now() + TOKEN_EXPIRES_AFTER_MS).toISOString();
+        await this.apiAuth();
+        await this.saveSession();
+        operation?.success("Refresh success");
+        return true;
+      }
       if (this.debug) {
         await this.logAuthError(response, false);
       }
-      operation?.failure("Refresh failed");
-      return false;
+    } catch {
+      // Fall through to the new CIAM login flow.
     }
-    const data = /** @type {{ id_token?: string, access_token?: string }} */ (await response.json());
-    this.auth.idToken = data.id_token || "";
-    this.auth.accessToken = data.access_token || "";
-    this.auth.expiresAt = new Date(Date.now() + TOKEN_EXPIRES_AFTER_MS).toISOString();
-    await this.apiAuth();
+
+    await this.authorize();
     await this.saveSession();
     operation?.success("Refresh success");
+    return true;
+  }
+
+  async authorize() {
+    this.clear(false);
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = generateCodeChallenge(codeVerifier);
+    const params = new URLSearchParams({
+      username: this.email,
+      password: this.password,
+      code_challenge: codeChallenge
+    });
+    const response = await this.request(`${constants.API_URL}/ciam/authorize?${params}`);
+    if (response.status >= 400) {
+      await this.logAuthError(response);
+    }
+    const authorizeData = await response.json();
+    const sessionId = authorizeData?.session_id || "";
+    if (!sessionId) {
+      throw new HonAuthError("Unable to get session_id", authorizeData);
+    }
+
+    const tokenResponse = await this.request(`${constants.API_URL}/ciam/token`, {
+      method: "POST",
+      body: JSON.stringify({
+        session_id: sessionId,
+        code_verifier: codeVerifier
+      })
+    });
+    if (tokenResponse.status >= 400) {
+      await this.logAuthError(tokenResponse);
+    }
+    const tokenData = await tokenResponse.json();
+    const tokens = tokenData?.tokens || {};
+    this.auth.sessionToken = tokens.cognito_token || tokens.cognitoToken || "";
+    this.auth.cognitoToken = this.auth.sessionToken;
+    this.auth.idToken = tokens.id_token || tokens.idToken || "";
+    this.auth.refreshToken = tokens.refresh_token || tokens.refreshToken || "";
+    this.auth.accessToken = tokens.access_token || tokens.accessToken || "";
+    this.auth.expiresAt = new Date(Date.now() + TOKEN_EXPIRES_AFTER_MS).toISOString();
+    if (!this.auth.sessionToken || !this.auth.idToken) {
+      throw new HonAuthError("Unable to get auth tokens", tokenData);
+    }
     return true;
   }
 
@@ -414,6 +453,14 @@ class NoLoginNeeded extends Error {}
 function generateNonce() {
   const nonce = crypto.randomBytes(16).toString("hex");
   return `${nonce.slice(0, 8)}-${nonce.slice(8, 12)}-${nonce.slice(12, 16)}-${nonce.slice(16, 20)}-${nonce.slice(20)}`;
+}
+
+function generateCodeVerifier() {
+  return crypto.randomBytes(64).toString("base64url");
+}
+
+function generateCodeChallenge(codeVerifier) {
+  return crypto.createHash("sha256").update(codeVerifier).digest("base64url");
 }
 
 function firstHref(text) {

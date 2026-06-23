@@ -28,7 +28,7 @@ class HonAppliance {
   }
 
   get applianceType() {
-    return String(this.info.applianceTypeName || "");
+    return String(this.info.applianceTypeName || this.info.applianceTypeId || this.info.applianceType || "");
   }
 
   get macAddress() {
@@ -272,7 +272,8 @@ function isAirConditioner(appliance) {
     appliance.nickName,
     appliance.modelName,
     appliance.info.applianceType,
-    appliance.info.applianceTypeCode
+    appliance.info.applianceTypeCode,
+    appliance.info.applianceTypeId
   ]
     .filter(Boolean)
     .map((value) => String(value).toLowerCase());

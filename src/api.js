@@ -12,9 +12,18 @@ class HonAPI {
   }
 
   async loadAppliances() {
-    const response = await this.hon.get(`${constants.API_URL}/commands/v1/appliance`);
+    const response = await this.hon.post(`${constants.API_URL}/unified-api/v1/view/appliance-list`, {
+      body: JSON.stringify({ deviceId: "homeassistant" })
+    });
     const result = await response.json();
-    return result?.payload?.appliances || [];
+    const appliances = result?.modules?.applianceList?.payload?.appliances || [];
+    const normalized = appliances.filter((appliance) => appliance?.macAddress && appliance?.applianceTypeId);
+    if (normalized.length) {
+      return normalized;
+    }
+    const legacyResponse = await this.hon.get(`${constants.API_URL}/commands/v1/appliance`);
+    const legacyResult = await legacyResponse.json();
+    return legacyResult?.payload?.appliances || [];
   }
 
   async loadCommands(appliance) {
