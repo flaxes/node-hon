@@ -5,8 +5,9 @@ const { findApplianceIdentifierMatches } = require("../appliance-identity");
 const CACHE_VERSION = 1;
 
 class ApplianceCache {
-  constructor(filePath) {
+  constructor(filePath, isDebug) {
     this.filePath = path.resolve(filePath || "./.hon-appliance-cache.json");
+    this.isDebug = isDebug;
   }
 
   async read() {
@@ -48,10 +49,16 @@ class ApplianceCache {
     await this.write({ version: CACHE_VERSION, appliances: next });
   }
 
+  async replaceAll(records) {
+    await this.write({ version: CACHE_VERSION, appliances: records });
+  }
+
   async write(data) {
+    const spaces = this.isDebug ? 2 : 0;
+
     await fs.mkdir(path.dirname(this.filePath), { recursive: true });
     const tmp = `${this.filePath}.${process.pid}.tmp`;
-    await fs.writeFile(tmp, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+    await fs.writeFile(tmp, `${JSON.stringify(data, null, spaces)}\n`, "utf8");
     await fs.rename(tmp, this.filePath);
   }
 }

@@ -26,7 +26,7 @@ class HonClient {
 
     /** @type {SessionStore | null} */
     this.sessionStore = sessionFile ? new SessionStore(sessionFile) : null;
-    this.applianceCache = new ApplianceCache(config.applianceCacheFile || "./cache/.hon-appliance-cache.json");
+    this.applianceCache = new ApplianceCache(config.applianceCacheFile || "./cache/.hon-appliance-cache.json", config.debug);
     this.forceApplianceCacheRefresh = Boolean(config.forceApplianceCacheRefresh);
     this.auth = new HonAuth({
       email: config.email,
@@ -143,21 +143,54 @@ class HonClient {
     const operation = this.logger.start("Loading appliances...");
 
     try {
-      const appliances = await this.api.loadAppliances();
-      for (const applianceData of appliances) {
-        const zones = Number(applianceData.zone || 0);
-        if (zones > 1) {
-          for (let zone = 1; zone <= zones; zone += 1) {
-            await this.createAppliance({ ...applianceData }, zone);
-          }
+      if (!this.forceApplianceCacheRefresh) {
+        const cacheLoaded = await this.#setupFromCache();
+        if (cacheLoaded) {
+          operation.success(`Loaded ${this.appliances.length} appliance(s) from cache`);
+          return;
         }
-        await this.createAppliance(applianceData);
       }
+      await this.#setupLive();
       operation.success(`Loaded ${this.appliances.length} appliance(s)`);
     } catch (error) {
       operation.failure("Loading appliances failed");
       throw error;
     }
+  }
+
+  async #setupFromCache() {
+    try {
+      const cache = await this.applianceCache.read();
+      const records = cache.appliances || [];
+      if (!records.length) {
+        return false;
+      }
+      this.appliances = [];
+      for (const record of records) {
+        const appliance = HonAppliance.fromCacheRecord(this.api, record);
+        if (appliance.macAddress) {
+          this.appliances.push(appliance);
+        }
+      }
+      return this.appliances.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  async #setupLive() {
+    this.appliances = [];
+    const appliances = await this.api.loadAppliances();
+    for (const applianceData of appliances) {
+      const zones = Number(applianceData.zone || 0);
+      if (zones > 1) {
+        for (let zone = 1; zone <= zones; zone += 1) {
+          await this.createAppliance({ ...applianceData }, zone);
+        }
+      }
+      await this.createAppliance(applianceData);
+    }
+    await this.applianceCache.replaceAll(this.appliances.map((appliance) => appliance.toCacheRecord()));
   }
 
   /**

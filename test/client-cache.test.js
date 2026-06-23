@@ -51,6 +51,73 @@ test("cache hit skips live setup calls and can apply a preset", async () => {
   });
 });
 
+test("getAppliances loads all appliances from applianceCacheFile", async () => {
+  const { client, cacheFile, calls } = makeClient();
+  const cache = cacheWithAc();
+  cache.appliances.push({
+    ...cache.appliances[0],
+    info: { ...cache.appliances[0].info, macAddress: "bb", nickName: "Bedroom" },
+    macAddress: "bb",
+    uniqueId: "bb",
+    nickName: "Bedroom"
+  });
+  await fs.writeFile(cacheFile, JSON.stringify(cache, null, 2), "utf8");
+
+  const appliances = await client.getAppliances();
+
+  assert.deepEqual(appliances.map((appliance) => appliance.macAddress), ["aa", "bb"]);
+  assert.equal(appliances[0].commands.startProgram.name, "startProgram");
+  assert.equal(calls.loadAppliances, 0);
+  assert.equal(calls.loadCommands, 0);
+  assert.equal(calls.loadAttributes, 0);
+  assert.equal(calls.loadStatistics, 0);
+  assert.equal(calls.loadMaintenance, 0);
+});
+
+test("getAppliances cache miss falls back to live setup and writes applianceCacheFile", async () => {
+  const { client, cacheFile, calls } = makeClient();
+  client.api.loadAppliances = async () => {
+    calls.loadAppliances += 1;
+    return [
+      applianceInfo(),
+      { ...applianceInfo(), macAddress: "bb", nickName: "Bedroom" }
+    ];
+  };
+
+  const appliances = await client.getAppliances();
+  const cache = JSON.parse(await fs.readFile(cacheFile, "utf8"));
+
+  assert.deepEqual(appliances.map((appliance) => appliance.macAddress), ["aa", "bb"]);
+  assert.deepEqual(cache.appliances.map((appliance) => appliance.macAddress), ["aa", "bb"]);
+  assert.equal(calls.loadAppliances, 1);
+  assert.equal(calls.loadCommands, 2);
+  assert.equal(calls.loadAttributes, 2);
+  assert.equal(calls.loadStatistics, 2);
+  assert.equal(calls.loadMaintenance, 2);
+});
+
+test("getAppliances forceApplianceCacheRefresh bypasses applianceCacheFile", async () => {
+  const { client, cacheFile, calls } = makeClient({ forceApplianceCacheRefresh: true });
+  await fs.writeFile(cacheFile, JSON.stringify(cacheWithAc(), null, 2), "utf8");
+
+  const appliances = await client.getAppliances();
+
+  assert.deepEqual(appliances.map((appliance) => appliance.macAddress), ["aa"]);
+  assert.equal(calls.loadAppliances, 1);
+  assert.equal(calls.loadCommands, 1);
+});
+
+test("getAppliances corrupt applianceCacheFile falls back to live setup", async () => {
+  const { client, cacheFile, calls } = makeClient();
+  await fs.writeFile(cacheFile, "{not-json", "utf8");
+
+  const appliances = await client.getAppliances();
+
+  assert.deepEqual(appliances.map((appliance) => appliance.macAddress), ["aa"]);
+  assert.equal(calls.loadAppliances, 1);
+  assert.equal(calls.loadCommands, 1);
+});
+
 test("cache hit can find AC by exact nickname", async () => {
   const { client, cacheFile, calls } = makeClient();
   await fs.writeFile(cacheFile, JSON.stringify(cacheWithAc(), null, 2), "utf8");
