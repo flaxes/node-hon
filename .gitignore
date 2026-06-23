@@ -1,4 +1,5 @@
 /config.js
+/_config.js
 node_modules/
 cache/
 .hon-session.json
